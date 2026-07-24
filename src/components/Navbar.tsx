@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Download, Smartphone, Layers, Search, Bell, Heart, User, Image as ImageIcon, Sparkle, Moon, Share2, Check, Copy, ExternalLink, X, Globe, MessageCircle, Crown } from 'lucide-react';
+import { getPublicShareUrl } from '../utils/shareUtils';
 
 interface NavbarProps {
   activeTab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo';
@@ -28,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
-  const PUBLIC_SHARE_URL = 'https://ais-pre-xo4gsmrhe2iji5kpex2nfq-627952343829.us-west2.run.app';
+  const PUBLIC_SHARE_URL = getPublicShareUrl();
   const DEV_SHARE_URL = typeof window !== 'undefined' ? window.location.href : PUBLIC_SHARE_URL;
 
   const handleCopyUrl = async (urlToCopy: string) => {

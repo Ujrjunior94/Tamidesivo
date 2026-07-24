@@ -11,6 +11,42 @@ export interface ShareOptions {
 }
 
 /**
+ * Safely generates the public, shareable URL. 
+ * Converts private 'ais-dev-' URLs to their public 'ais-pre-' counterparts.
+ */
+export function getPublicShareUrl(): string {
+  const defaultUrl = 'https://ais-pre-xo4gsmrhe2iji5kpex2nfq-627952343829.us-west2.run.app';
+  if (typeof window === 'undefined') return defaultUrl;
+  
+  try {
+    const origin = window.location.origin;
+    if (origin.includes('ais-dev-')) {
+      return origin.replace('ais-dev-', 'ais-pre-');
+    }
+    return origin;
+  } catch (err) {
+    return defaultUrl;
+  }
+}
+
+/**
+ * Sanitizes any URL to ensure it doesn't contain private dev domains,
+ * converting them to public shareable ones.
+ */
+export function sanitizeShareUrl(url?: string): string {
+  const defaultUrl = getPublicShareUrl();
+  if (!url) return defaultUrl;
+  try {
+    if (url.includes('ais-dev-')) {
+      return url.replace('ais-dev-', 'ais-pre-');
+    }
+    return url;
+  } catch (err) {
+    return defaultUrl;
+  }
+}
+
+/**
  * Converts a HTMLCanvasElement into a PNG File object suitable for navigator.share
  */
 export async function canvasToPngFile(
@@ -44,7 +80,7 @@ export async function executeNativeShare(options: ShareOptions): Promise<{
   const text =
     options.text ||
     'Confira este adesivo de alta resolução da coleção Tamiris Santana para Instagram Stories, Reels e WhatsApp!';
-  const url = options.url || (typeof window !== 'undefined' ? window.location.href : '');
+  const url = sanitizeShareUrl(options.url);
 
   if (typeof navigator !== 'undefined' && navigator.share) {
     try {
@@ -83,7 +119,7 @@ export async function executeNativeShare(options: ShareOptions): Promise<{
  * Direct WhatsApp Share
  */
 export function shareToWhatsAppDirect(text: string, shareUrl?: string) {
-  const url = shareUrl || (typeof window !== 'undefined' ? window.location.href : '');
+  const url = sanitizeShareUrl(shareUrl);
   const message = `${text}\n\n✨ Confira em: ${url}`;
   const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   window.open(waUrl, '_blank', 'noopener,noreferrer');
