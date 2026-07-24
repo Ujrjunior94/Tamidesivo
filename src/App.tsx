@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { CategoryBar } from './components/CategoryBar';
 import { StickerGrid } from './components/StickerGrid';
@@ -13,7 +13,15 @@ import { STICKERS_DATA } from './data/stickersData';
 import { CategoryId, VisualStyle, StickerItem } from './types';
 import { renderStickerToCanvas } from './utils/stickerRenderer';
 import JSZip from 'jszip';
-import { Sparkles, Crown, Heart } from 'lucide-react';
+import { Sparkles, Crown, Heart, CloudCheck } from 'lucide-react';
+import { ensureAuth } from './lib/firebase';
+import {
+  subscribeToCustomStickers,
+  saveCustomStickerToCloud,
+  subscribeToFavorites,
+  syncFavoritesToCloud,
+} from './lib/firestoreService';
+import { User } from 'firebase/auth';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story'>('library');
@@ -26,11 +34,50 @@ export default function App() {
   const [editingSticker, setEditingSticker] = useState<StickerItem | null>(null);
   const [storySticker, setStorySticker] = useState<StickerItem | null>(null);
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
+
+  // Initialize Firebase Auth and real-time Firestore listeners
+  useEffect(() => {
+    let unsubscribeFavs: () => void = () => {};
+
+    ensureAuth((user) => {
+      setCurrentUser(user);
+      setIsCloudSynced(true);
+
+      unsubscribeFavs = subscribeToFavorites(user.uid, (cloudFavs) => {
+        setFavoritesList(cloudFavs);
+      });
+    }).catch((err) => {
+      console.error('Firebase Auth Error:', err);
+    });
+
+    const unsubscribeStickers = subscribeToCustomStickers((cloudStickers) => {
+      if (cloudStickers.length > 0) {
+        setAllStickers((prev) => {
+          const existingIds = new Set(cloudStickers.map((s) => s.id));
+          const localOnly = STICKERS_DATA.filter((s) => !existingIds.has(s.id));
+          return [...cloudStickers, ...localOnly];
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeFavs();
+      unsubscribeStickers();
+    };
+  }, []);
 
   const handleToggleFavorite = (id: string) => {
-    setFavoritesList((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    const updatedFavs = favoritesList.includes(id)
+      ? favoritesList.filter((item) => item !== id)
+      : [...favoritesList, id];
+
+    setFavoritesList(updatedFavs);
+
+    if (currentUser) {
+      syncFavoritesToCloud(currentUser.uid, updatedFavs);
+    }
   };
 
   // Filter stickers based on category, favorites, visual style, and search query
@@ -58,6 +105,7 @@ export default function App() {
 
   const handleAddGeneratedSticker = (newSticker: StickerItem) => {
     setAllStickers((prev) => [newSticker, ...prev]);
+    saveCustomStickerToCloud(newSticker, currentUser?.uid);
   };
 
   const handleEditSticker = (sticker: StickerItem) => {
@@ -232,12 +280,19 @@ export default function App() {
             <UserProfileView
               totalStickersCount={allStickers.length}
               favoritesCount={favoritesList.length}
+              allStickers={allStickers}
+              favoritesList={favoritesList}
+              currentUserId={currentUser?.uid}
               onGoToLibrary={() => {
                 setActiveTab('library');
                 setSelectedCategory('all');
               }}
               onGoToAIPrompt={() => setActiveTab('prompt-master')}
               onDownloadAllZip={handleDownloadMasterZip}
+              onRestoreBackup={(updatedStickers, updatedFavs) => {
+                setAllStickers(updatedStickers);
+                setFavoritesList(updatedFavs);
+              }}
             />
           )}
         </main>
@@ -274,9 +329,16 @@ export default function App() {
               </span>
               <span className="text-[#EFE8DF]/70 font-light">• Harmonização Facial & Estética Avançada</span>
             </div>
-            <p className="text-[#EFE8DF]/80 font-light">
-              Biblioteca de Adesivos PNG Transparentes em Resolução 4K para Instagram Stories, Reels, Canva e CapCut
-            </p>
+            
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#3D141E] border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] font-medium">
+                <CloudCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Firebase Cloud Sincronizado</span>
+              </div>
+              <p className="text-[#EFE8DF]/80 font-light hidden md:block">
+                Adesivos PNG Transparentes 4K em Nuvem
+              </p>
+            </div>
           </div>
         </footer>
       </div>

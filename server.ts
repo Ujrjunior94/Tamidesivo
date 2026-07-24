@@ -95,6 +95,57 @@ Idioma Preferencial das Frases: "${language || "Português"}"`;
   }
 });
 
+// AI Premium Palette Generator Endpoint for Estética Avançada
+app.post("/api/ai/palette", async (req, res) => {
+  try {
+    const { trend = "Harmonização Facial Gold", conceptText = "" } = req.body;
+
+    const ai = getGenAI();
+
+    const systemPrompt = `Você é um diretor de arte e colorista especialista em DESIGN DE MARCA DE LUXO, CROMOTERAPIA E PALETAS DE CORES PARA ESTÉTICA AVANÇADA, CLÍNICAS DE HARMONIZAÇÃO, BEAUTY E LIFESTYLE PREMIUM.
+Sua missão é criar uma paleta de cores perfeitamente harmônica e sofisticada baseada na tendência de 'Estética Avançada' fornecida.
+
+DIRETRIZES DE DESIGN:
+- As cores devem exalar luxo, sofisticação, higiene clínica impecável e elegância visual para Instagram Stories e materiais de clínicas médicas.
+- Combine tons ricos (Ouro Champagne, Vinho Bordeaux, Rose Gold, Off-White Pérola, Nude Aveludado, Verde Menta Muted, Preto Fosco Nobre, Prata Cristal) garantindo excelente contraste para legibilidade em adesivos transparentes.
+
+Responda RIGOROSAMENTE em formato JSON com o seguinte esquema:
+{
+  "name": "Nome sofisticado da paleta (ex: Ouro Champagne & Vinho Bordeaux)",
+  "gradientStart": "#HEX",
+  "gradientEnd": "#HEX",
+  "textColor": "#HEX",
+  "strokeColor": "#HEX",
+  "glowColor": "#HEX",
+  "shadowColor": "rgba(r,g,b,alpha)",
+  "aestheticRationale": "Breve frase descritiva em Português explicando o conceito cromatico e por que transmite luxo e harmonização."
+}`;
+
+    const userContent = `Tendência de Estética Avançada escolhida: "${trend}"
+Contexto do adesivo / Frase: "${conceptText || "Harmonização & Elegância"}"`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: userContent,
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const jsonText = response.text || "{}";
+    const data = JSON.parse(jsonText);
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    console.error("Erro no /api/ai/palette:", err);
+    res.status(500).json({
+      error: "Falha ao gerar a Paleta Premium com Gemini.",
+      details: err.message,
+    });
+  }
+});
+
 // AI Image Generation Endpoint for Custom Stickers
 app.post("/api/ai/generate-sticker", async (req, res) => {
   try {
@@ -279,6 +330,22 @@ Responda apenas em formato JSON com a propriedade "stickers" contendo a array.`;
   }
 });
 
+// Firebase configuration public metadata endpoint
+app.get("/api/firebase-config", (req, res) => {
+  try {
+    const fs = require("fs");
+    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      res.json({ success: true, config });
+    } else {
+      res.status(404).json({ error: "Configuração do Firebase não encontrada." });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -286,6 +353,21 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    // Fallback for SPA routing in development mode
+    app.get("*", async (req, res, next) => {
+      if (req.originalUrl.startsWith("/api")) return next();
+      try {
+        const fs = await import("fs");
+        const url = req.originalUrl;
+        let template = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
@@ -300,3 +382,4 @@ async function startServer() {
 }
 
 startServer();
+

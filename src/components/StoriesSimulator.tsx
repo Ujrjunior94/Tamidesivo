@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StickerItem, StoryMockupElement } from '../types';
+import { StickerItem, StoryMockupElement, CategoryId } from '../types';
 import { IconSymbol } from './IconSymbol';
 import {
   Smartphone,
@@ -223,7 +223,7 @@ export const StoriesSimulator: React.FC<StoriesSimulatorProps> = ({ initialStick
         sticker: allStickers[0] || {
           id: 'def-1',
           title: 'Harmonização Facial',
-          category: 'harmonizacao',
+          category: 'estetica-facial' as CategoryId,
           style: 'Traços Finos',
           fontFamily: 'Script Elegante',
           primaryColor: '#D4AF37',

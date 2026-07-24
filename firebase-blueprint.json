@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "stickers": {
+      "title": "Custom Stickers",
+      "description": "User created and AI generated stickers for Stories and WhatsApp",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "style": { "type": "string" },
+        "fontFamily": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "textColor": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "isNew": { "type": "boolean" },
+        "elements": { "type": "array", "items": { "type": "string" } },
+        "iconSymbol": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category"]
+    },
+    "favorites": {
+      "title": "User Favorites",
+      "description": "Favorited sticker IDs",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "stickerId": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "stickerId"]
+    },
+    "user_configs": {
+      "title": "User Configuration",
+      "description": "User preferences, brand color palettes and settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "activeTab": { "type": "string" },
+        "customBrandColor": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId"]
+    }
+  }
+}

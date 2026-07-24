@@ -1,0 +1,283 @@
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  getDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { db } from './firebase';
+import { StickerItem } from '../types';
+
+/**
+ * Real-time listener for cloud-synced custom stickers
+ */
+export function subscribeToCustomStickers(onStickersUpdated: (stickers: StickerItem[]) => void) {
+  try {
+    const q = query(collection(db, 'stickers'), orderBy('createdAt', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const stickers: StickerItem[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          stickers.push({
+            id: doc.id,
+            title: data.title || '',
+            category: data.category || 'estetica-facial',
+            style: data.style || 'Minimalista',
+            tags: data.tags || [],
+            iconSymbol: data.iconSymbol,
+            elements: data.elements || [],
+            gradient: data.gradient,
+            primaryColor: data.primaryColor,
+            textColor: data.textColor,
+            fontFamily: data.fontFamily,
+            badge: data.badge,
+            customSvgPath: data.customSvgPath,
+            isCustomGenerated: true,
+            previewUrl: data.previewUrl,
+          });
+        });
+        onStickersUpdated(stickers);
+      },
+      (error) => {
+        console.error('Firestore custom stickers sync error:', error);
+      }
+    );
+  } catch (err) {
+    console.error('Error establishing Firestore sticker subscription:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Save or update a custom sticker in Firestore
+ */
+export async function saveCustomStickerToCloud(sticker: StickerItem, userId?: string) {
+  try {
+    const docRef = doc(db, 'stickers', sticker.id);
+    await setDoc(
+      docRef,
+      {
+        ...sticker,
+        createdBy: userId || 'anonymous',
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.error('Failed to save sticker to Firestore:', err);
+  }
+}
+
+/**
+ * Real-time listener for user favorites
+ */
+export function subscribeToFavorites(userId: string, onFavoritesUpdated: (favorites: string[]) => void) {
+  try {
+    const userFavRef = doc(db, 'favorites', userId);
+    return onSnapshot(
+      userFavRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          onFavoritesUpdated(data.stickerIds || []);
+        } else {
+          onFavoritesUpdated([]);
+        }
+      },
+      (error) => {
+        console.error('Firestore favorites sync error:', error);
+      }
+    );
+  } catch (err) {
+    console.error('Error subscribing to favorites:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Toggle favorite status in cloud
+ */
+export async function syncFavoritesToCloud(userId: string, favoritesList: string[]) {
+  try {
+    const userFavRef = doc(db, 'favorites', userId);
+    await setDoc(userFavRef, {
+      userId,
+      stickerIds: favoritesList,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.error('Failed to sync favorites to Firestore:', err);
+  }
+}
+
+/**
+ * Sync user profile and app config in cloud
+ */
+export async function syncUserConfigToCloud(userId: string, configData: Record<string, any>) {
+  try {
+    const configRef = doc(db, 'user_configs', userId);
+    await setDoc(configRef, {
+      userId,
+      ...configData,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.error('Failed to sync user config to Firestore:', err);
+  }
+}
+
+/**
+ * Real-time listener for user config
+ */
+export function subscribeToUserConfig(userId: string, onConfigUpdated: (data: Record<string, any>) => void) {
+  try {
+    const configRef = doc(db, 'user_configs', userId);
+    return onSnapshot(configRef, (docSnap) => {
+      if (docSnap.exists()) {
+        onConfigUpdated(docSnap.data());
+      }
+    });
+  } catch (err) {
+    console.error('Error subscribing to user config:', err);
+    return () => {};
+  }
+}
+
+export interface BackupData {
+  version: string;
+  app: string;
+  exportedAt: string;
+  customStickers: StickerItem[];
+  favorites: string[];
+  userConfig?: Record<string, any>;
+}
+
+/**
+ * Creates and downloads a JSON backup file of custom stickers and favorites
+ */
+export function exportBackupJSON(
+  allStickers: StickerItem[],
+  favoritesList: string[],
+  userId?: string
+) {
+  const customStickers = allStickers.filter(
+    (s) => s.isCustomGenerated || s.id.startsWith('cust-') || s.id.startsWith('gen-') || s.id.startsWith('edit-')
+  );
+
+  const backupPayload: BackupData = {
+    version: '1.0',
+    app: 'Tamiris Santana • Estúdio de Adesivos',
+    exportedAt: new Date().toISOString(),
+    customStickers,
+    favorites: favoritesList,
+    userConfig: {
+      userId: userId || 'anonymous',
+      exportClient: typeof window !== 'undefined' ? window.navigator.userAgent : 'web',
+    },
+  };
+
+  const jsonString = JSON.stringify(backupPayload, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const fileName = `backup-tamiris-santana-estudio-${dateStr}.json`;
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  return {
+    customStickersCount: customStickers.length,
+    favoritesCount: favoritesList.length,
+    fileName,
+  };
+}
+
+/**
+ * Restores custom stickers and favorites from a JSON backup payload and syncs with Firestore
+ */
+export async function restoreBackupData(
+  jsonText: string,
+  existingStickers: StickerItem[],
+  existingFavorites: string[],
+  userId?: string
+): Promise<{
+  success: boolean;
+  stickersRestored: number;
+  favoritesRestored: number;
+  updatedStickers: StickerItem[];
+  updatedFavorites: string[];
+  message: string;
+}> {
+  try {
+    const data = JSON.parse(jsonText) as BackupData;
+
+    if (!data || (!Array.isArray(data.customStickers) && !Array.isArray(data.favorites))) {
+      throw new Error('Arquivo de backup inválido ou em formato incompatível.');
+    }
+
+    let stickersRestoredCount = 0;
+    let favoritesRestoredCount = 0;
+
+    const customStickersToRestore: StickerItem[] = Array.isArray(data.customStickers)
+      ? data.customStickers
+      : [];
+    const favoritesToRestore: string[] = Array.isArray(data.favorites) ? data.favorites : [];
+
+    // Save imported custom stickers to Firestore
+    for (const sticker of customStickersToRestore) {
+      if (sticker && sticker.id && sticker.title) {
+        await saveCustomStickerToCloud(sticker, userId);
+        stickersRestoredCount++;
+      }
+    }
+
+    // Merge custom stickers into state
+    const existingStickerIds = new Set(existingStickers.map((s) => s.id));
+    const newStickersToAppend = customStickersToRestore.filter(
+      (s) => s && s.id && !existingStickerIds.has(s.id)
+    );
+    const updatedStickers = [...newStickersToAppend, ...existingStickers];
+
+    // Merge favorites
+    const mergedFavsSet = new Set([...existingFavorites, ...favoritesToRestore]);
+    const updatedFavorites = Array.from(mergedFavsSet);
+    favoritesRestoredCount = favoritesToRestore.length;
+
+    // Sync merged favorites to Firestore
+    if (userId) {
+      await syncFavoritesToCloud(userId, updatedFavorites);
+    }
+
+    return {
+      success: true,
+      stickersRestored: stickersRestoredCount,
+      favoritesRestored: favoritesRestoredCount,
+      updatedStickers,
+      updatedFavorites,
+      message: `Backup restaurado com sucesso! ${stickersRestoredCount} adesivo(s) e ${favoritesRestoredCount} favorito(s) sincronizados com o Firestore.`,
+    };
+  } catch (err: any) {
+    console.error('Error restoring backup:', err);
+    return {
+      success: false,
+      stickersRestored: 0,
+      favoritesRestored: 0,
+      updatedStickers: existingStickers,
+      updatedFavorites: existingFavorites,
+      message: err?.message || 'Falha ao processar arquivo de backup JSON.',
+    };
+  }
+}
+

@@ -76,11 +76,16 @@ export const StickerCard: React.FC<StickerCardProps> = ({
       canvasRef.current.toBlob(async (blob) => {
         if (!blob) return;
         try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-          ]);
+          if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]);
+          } else {
+            downloadCanvasAsPng(canvasRef.current!, `tamiris-santana-sticker-${sticker.title.toLowerCase().replace(/\s+/g, '-')}.png`);
+          }
         } catch (err) {
-          console.log('Clipboard fallback copy');
+          console.log('Clipboard fallback copy - downloading');
+          downloadCanvasAsPng(canvasRef.current!, `tamiris-santana-sticker-${sticker.title.toLowerCase().replace(/\s+/g, '-')}.png`);
         }
       });
       setTimeout(() => setCopied(false), 2000);

@@ -3,6 +3,12 @@ import { StickerItem, StickerCustomizerState, VisualStyle } from '../types';
 import { renderStickerToCanvas, downloadCanvasAsPng } from '../utils/stickerRenderer';
 import { ALL_STYLES } from '../data/stickersData';
 import {
+  executeNativeShare,
+  shareToWhatsAppDirect,
+  shareToInstagramDirect,
+  copyCanvasToClipboard,
+} from '../utils/shareUtils';
+import {
   Download,
   Copy,
   X,
@@ -32,7 +38,14 @@ import {
   Moon,
   Video,
   Play,
-  Film
+  Film,
+  Share2,
+  Send,
+  MessageCircle,
+  Instagram,
+  Wand2,
+  ExternalLink,
+  Info,
 } from 'lucide-react';
 
 export const ANIMATION_PRESETS = [
@@ -44,6 +57,14 @@ export const ANIMATION_PRESETS = [
   { id: 'fade-in', name: 'Fade In Delicado', className: 'animate-sticker-fade-in', desc: 'Surgimento gradual e elegante.', icon: '🌸' },
 ];
 
+const AESTHETIC_TRENDS = [
+  { id: 'Harmonização Facial Gold', label: 'Harmonização Facial Gold', colors: ['#D4AF37', '#5B1E2D'], desc: 'Ouro Champagne & Vinho Bordeux Nobilíssimo' },
+  { id: 'Glow Rose Gold & Nude', label: 'Glow Rose Gold & Nude', colors: ['#B76E79', '#FAF9F6'], desc: 'Rose Gold Aveludado & Off-White Nude' },
+  { id: 'Bordeaux Luxury Velvet', label: 'Bordeaux Luxury Velvet', colors: ['#4A121A', '#E6C687'], desc: 'Vinho Bordeaux Profundo & Ouro Foil' },
+  { id: 'Clean Clinical Mint & Crystal', label: 'Clean Clinical Mint & Crystal', colors: ['#A3E635', '#E0F2FE'], desc: 'Verde Menta Muted & Prata Cristalino' },
+  { id: 'Obsidian Black & Diamond', label: 'Obsidian Black & Diamond', colors: ['#1A1A1A', '#F59E0B'], desc: 'Preto Fosco Nobre & Dourado Metálico' },
+  { id: 'Glow Botulínico & Pérola', label: 'Glow Botulínico & Pérola', colors: ['#EC4899', '#FFF1F2'], desc: 'Rosa Glow Procedimento & Pérola Suave' },
+];
 
 interface StickerStudioProps {
   sticker: StickerItem | null;
@@ -97,7 +118,113 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
   const [animatedPreview, setAnimatedPreview] = useState(true);
   const [animationPreset, setAnimationPreset] = useState<string>('scale-up');
   const [animKey, setAnimKey] = useState(1);
-  const [activeTab, setActiveTab] = useState<'text' | 'style' | 'filters' | 'animation' | 'outline' | 'icon'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'style' | 'palette' | 'filters' | 'animation' | 'outline' | 'icon'>('text');
+
+  // Gemini Palette State
+  const [selectedTrend, setSelectedTrend] = useState<string>('Harmonização Facial Gold');
+  const [customConcept, setCustomConcept] = useState<string>('');
+  const [isGeneratingPalette, setIsGeneratingPalette] = useState<boolean>(false);
+  const [generatedPalette, setGeneratedPalette] = useState<{
+    name: string;
+    gradientStart: string;
+    gradientEnd: string;
+    textColor: string;
+    strokeColor: string;
+    glowColor: string;
+    shadowColor: string;
+    aestheticRationale: string;
+  } | null>(null);
+
+  // Direct Share Modal State
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = 1200;
+    canvas.height = 1200;
+
+    renderStickerToCanvas(ctx, 1200, 1200, state);
+  }, [state]);
+
+  const handleGeneratePalette = async () => {
+    setIsGeneratingPalette(true);
+    try {
+      const response = await fetch('/api/ai/palette', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trend: selectedTrend,
+          conceptText: customConcept || state.text,
+        }),
+      });
+
+      const res = await response.json();
+      if (res.success && res.data) {
+        setGeneratedPalette(res.data);
+      } else {
+        alert('Não foi possível gerar a paleta Gemini no momento. Tente novamente.');
+      }
+    } catch (err) {
+      console.error('Error generating palette:', err);
+      alert('Erro de rede ao conectar com o serviço de Paletas Gemini.');
+    } finally {
+      setIsGeneratingPalette(false);
+    }
+  };
+
+  const handleApplyPalette = () => {
+    if (!generatedPalette) return;
+    setState((prev) => ({
+      ...prev,
+      gradientStart: generatedPalette.gradientStart,
+      gradientEnd: generatedPalette.gradientEnd,
+      textColor: generatedPalette.textColor,
+      strokeColor: generatedPalette.strokeColor || '#FFFFFF',
+      glowColor: generatedPalette.glowColor || generatedPalette.gradientStart,
+      shadowColor: generatedPalette.shadowColor || 'rgba(91, 30, 45, 0.25)',
+      hasGradient: true,
+    }));
+    setShareNotice('Paleta Gemini aplicada com sucesso ao sticker!');
+    setTimeout(() => setShareNotice(null), 3000);
+  };
+
+  const handleDirectNativeShare = async () => {
+    if (!canvasRef.current) return;
+    const result = await executeNativeShare({
+      canvas: canvasRef.current,
+      title: `Adesivo ${state.text} • Tamiris Santana`,
+      text: `Confira este adesivo de alta resolução (${state.text}) criado no Estúdio Tamiris Santana!`,
+      filename: `tamiris-santana-sticker-${state.text.toLowerCase().replace(/\s+/g, '-')}.png`,
+    });
+
+    if (result.success && result.sharedNatively) {
+      setShareNotice('Adesivo compartilhado com sucesso!');
+      setTimeout(() => setShareNotice(null), 3000);
+    } else if (!result.cancelled) {
+      setShowShareModal(true);
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    shareToWhatsAppDirect(
+      `✨ Adesivo Exclusivo Tamiris Santana: "${state.text}" em alta resolução 4K PNG para Instagram Stories e WhatsApp.`,
+      window.location.href
+    );
+  };
+
+  const handleShareInstagram = async () => {
+    if (canvasRef.current) {
+      await copyCanvasToClipboard(canvasRef.current);
+      setShareNotice('Adesivo PNG copiado! Abra o Instagram e cole na tela de Stories.');
+      setTimeout(() => setShareNotice(null), 4000);
+    }
+    shareToInstagramDirect();
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -117,6 +244,12 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
     setAnimKey((prev) => prev + 1);
 
     try {
+      if (typeof MediaRecorder === 'undefined') {
+        alert('Seu navegador atual não suporta a API de gravação MediaRecorder. Experimente usar o Chrome ou Firefox no Desktop.');
+        setRecordingVideo(false);
+        return;
+      }
+
       const canvas = canvasRef.current;
       const stream = canvas.captureStream ? canvas.captureStream(30) : null;
       if (!stream) {
@@ -129,7 +262,15 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
         ? 'video/webm;codecs=vp9'
         : MediaRecorder.isTypeSupported('video/webm')
         ? 'video/webm'
-        : 'video/mp4';
+        : MediaRecorder.isTypeSupported('video/mp4')
+        ? 'video/mp4'
+        : '';
+
+      if (!mimeType) {
+        alert('Nenhum formato de vídeo compatível foi encontrado neste dispositivo.');
+        setRecordingVideo(false);
+        return;
+      }
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       const chunks: Blob[] = [];
@@ -143,7 +284,8 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `adesivo-animado-${state.text.toLowerCase().replace(/\s+/g, '-')}.webm`;
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        a.download = `adesivo-animado-${state.text.toLowerCase().replace(/\s+/g, '-')}.${ext}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -160,6 +302,7 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
       }, 3000);
     } catch (err) {
       console.error(err);
+      alert('Não foi possível gravar o vídeo neste navegador.');
       setRecordingVideo(false);
     }
   };
@@ -185,9 +328,14 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
       canvasRef.current.toBlob(async (blob) => {
         if (!blob) return;
         try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } else {
+            downloadCanvasAsPng(canvasRef.current!, `tamiris-santana-sticker-${state.text.toLowerCase().replace(/\s+/g, '-')}.png`);
+          }
         } catch (err) {
-          console.log('Clipboard fallback');
+          console.log('Clipboard fallback - downloading file');
+          downloadCanvasAsPng(canvasRef.current!, `tamiris-santana-sticker-${state.text.toLowerCase().replace(/\s+/g, '-')}.png`);
         }
       });
       setTimeout(() => setCopied(false), 2000);
@@ -271,6 +419,23 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
 
           {/* Export & Animation Action Bar */}
           <div className="w-full space-y-2 mt-4">
+            {/* Share Notice Banner */}
+            {shareNotice && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-semibold flex items-center justify-between">
+                <span>{shareNotice}</span>
+                <button onClick={() => setShareNotice(null)} className="text-emerald-700 font-bold ml-1">×</button>
+              </div>
+            )}
+
+            {/* Direct Web Share API Button */}
+            <button
+              onClick={handleDirectNativeShare}
+              className="w-full py-2.5 px-4 rounded-xl bg-[#5B1E2D] text-[#D4AF37] hover:bg-[#8B2D44] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all border border-[#D4AF37]/50"
+            >
+              <Share2 className="w-4 h-4 text-[#D4AF37]" />
+              <span>Compartilhar Direto (WhatsApp / Instagram)</span>
+            </button>
+
             {/* WebM Video Export Button for Stories */}
             <button
               onClick={handleExportWebM}
@@ -334,7 +499,7 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
             </div>
 
             {/* Customizer Tabs */}
-            <div className="grid grid-cols-6 gap-1 bg-[#F8F6F3] p-1.5 rounded-xl my-4 border border-[#D4AF37]/25 text-[11px] font-semibold">
+            <div className="grid grid-cols-7 gap-1 bg-[#F8F6F3] p-1.5 rounded-xl my-4 border border-[#D4AF37]/25 text-[10px] sm:text-[11px] font-semibold">
               <button
                 onClick={() => setActiveTab('text')}
                 className={`py-2 rounded-lg flex items-center justify-center gap-1 transition-all ${
@@ -350,6 +515,14 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
                 }`}
               >
                 <Palette className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Estilo</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('palette')}
+                className={`py-2 rounded-lg flex items-center justify-center gap-1 transition-all ${
+                  activeTab === 'palette' ? 'bg-[#5B1E2D] text-[#D4AF37] font-bold shadow-sm' : 'text-[#2B2B2B] hover:text-[#5B1E2D]'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" /> <span className="hidden sm:inline">Paleta AI</span>
               </button>
               <button
                 onClick={() => setActiveTab('filters')}
@@ -564,6 +737,166 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Tab: Gemini AI Premium Palette */}
+            {activeTab === 'palette' && (
+              <div className="space-y-4">
+                <div className="bg-[#5B1E2D]/5 border border-[#D4AF37]/30 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-serif font-bold text-[#5B1E2D] flex items-center gap-1.5">
+                      <Wand2 className="w-4 h-4 text-[#D4AF37]" /> Gerar Paleta Premium (Gemini AI)
+                    </h3>
+                    <span className="text-[10px] font-bold bg-[#D4AF37] text-[#5B1E2D] px-2 py-0.5 rounded-full">
+                      Estética Avançada
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#6E6E6E] leading-relaxed">
+                    Selecione uma tendência de clínica e beleza de luxo para a Inteligência Artificial Gemini criar um esquema de cores perfeitamente harmônico.
+                  </p>
+
+                  {/* Aesthetic Trends Selector */}
+                  <div className="space-y-2 pt-1">
+                    <label className="text-[11px] font-semibold text-[#2B2B2B] block">
+                      Escolha a Tendência de Estética Avançada:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {AESTHETIC_TRENDS.map((trend) => (
+                        <button
+                          key={trend.id}
+                          onClick={() => setSelectedTrend(trend.id)}
+                          className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                            selectedTrend === trend.id
+                              ? 'bg-[#5B1E2D] text-[#F8F6F3] border-[#D4AF37] shadow-sm'
+                              : 'bg-white text-[#2B2B2B] border-[#D4AF37]/25 hover:border-[#5B1E2D]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-xs font-bold">{trend.label}</span>
+                            <div className="flex -space-x-1">
+                              <span
+                                className="w-3.5 h-3.5 rounded-full border border-white shadow-xs"
+                                style={{ backgroundColor: trend.colors[0] }}
+                              />
+                              <span
+                                className="w-3.5 h-3.5 rounded-full border border-white shadow-xs"
+                                style={{ backgroundColor: trend.colors[1] }}
+                              />
+                            </div>
+                          </div>
+                          <span
+                            className={`text-[10px] mt-1 ${
+                              selectedTrend === trend.id ? 'text-[#D4AF37]' : 'text-[#6E6E6E]'
+                            }`}
+                          >
+                            {trend.desc}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Concept text refinement */}
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[11px] font-semibold text-[#2B2B2B] block">
+                      Refinamento do Conceito (Opcional):
+                    </label>
+                    <input
+                      type="text"
+                      value={customConcept}
+                      onChange={(e) => setCustomConcept(e.target.value)}
+                      placeholder={`Ex: Harmonização Labial para ${state.text}`}
+                      className="w-full bg-white border border-[#D4AF37]/30 rounded-xl px-3 py-2 text-xs text-[#2B2B2B] focus:outline-none focus:border-[#5B1E2D]"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleGeneratePalette}
+                    disabled={isGeneratingPalette}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#5B1E2D] via-[#7B283E] to-[#5B1E2D] text-[#D4AF37] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-md border border-[#D4AF37]/50 hover:opacity-95 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {isGeneratingPalette ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 text-[#D4AF37] animate-spin" />
+                        <span>Consultando Gemini AI...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+                        <span>Gerar Paleta Harmônica Gemini</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Generated Palette Display */}
+                {generatedPalette && (
+                  <div className="bg-white border-2 border-[#D4AF37] rounded-2xl p-4 space-y-3 shadow-lg animate-sticker-fade-in">
+                    <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-2">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-wider">
+                          Paleta Gemini Criada
+                        </span>
+                        <h4 className="text-sm font-serif font-bold text-[#5B1E2D]">
+                          {generatedPalette.name}
+                        </h4>
+                      </div>
+                      <button
+                        onClick={handleApplyPalette}
+                        className="px-3 py-1.5 rounded-lg bg-[#5B1E2D] text-[#D4AF37] font-serif font-bold text-xs hover:bg-[#8B2D44] transition-all flex items-center gap-1 shadow-sm border border-[#D4AF37]/40 cursor-pointer"
+                      >
+                        <Check className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <span>Aplicar no Sticker</span>
+                      </button>
+                    </div>
+
+                    {/* Color Swatches */}
+                    <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-mono">
+                      <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col items-center gap-1">
+                        <span
+                          className="w-7 h-7 rounded-full shadow-md border border-white"
+                          style={{ backgroundColor: generatedPalette.gradientStart }}
+                        />
+                        <span className="text-stone-700 font-bold truncate max-w-full">{generatedPalette.gradientStart}</span>
+                        <span className="text-[9px] text-stone-500">Grad. Início</span>
+                      </div>
+
+                      <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col items-center gap-1">
+                        <span
+                          className="w-7 h-7 rounded-full shadow-md border border-white"
+                          style={{ backgroundColor: generatedPalette.gradientEnd }}
+                        />
+                        <span className="text-stone-700 font-bold truncate max-w-full">{generatedPalette.gradientEnd}</span>
+                        <span className="text-[9px] text-stone-500">Grad. Fim</span>
+                      </div>
+
+                      <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col items-center gap-1">
+                        <span
+                          className="w-7 h-7 rounded-full shadow-md border border-white"
+                          style={{ backgroundColor: generatedPalette.textColor }}
+                        />
+                        <span className="text-stone-700 font-bold truncate max-w-full">{generatedPalette.textColor}</span>
+                        <span className="text-[9px] text-stone-500">Texto</span>
+                      </div>
+
+                      <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col items-center gap-1">
+                        <span
+                          className="w-7 h-7 rounded-full shadow-md border border-white"
+                          style={{ backgroundColor: generatedPalette.strokeColor }}
+                        />
+                        <span className="text-stone-700 font-bold truncate max-w-full">{generatedPalette.strokeColor}</span>
+                        <span className="text-[9px] text-stone-500">Borda</span>
+                      </div>
+                    </div>
+
+                    {generatedPalette.aestheticRationale && (
+                      <p className="text-[11px] text-[#6E6E6E] italic bg-[#F8F6F3] p-2.5 rounded-xl border border-[#D4AF37]/20 leading-relaxed">
+                        "{generatedPalette.aestheticRationale}"
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -845,6 +1178,87 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
         </div>
 
       </div>
+
+      {/* Direct Share Modal Dialog */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-[#D4AF37] shadow-2xl space-y-4 animate-sticker-scale-up">
+            <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-3">
+              <div className="flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-[#D4AF37]" />
+                <h3 className="text-base font-serif font-bold text-[#5B1E2D]">
+                  Compartilhamento Direto
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="p-1.5 rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#6E6E6E] leading-relaxed">
+              Escolha a plataforma para enviar o adesivo <strong>"{state.text}"</strong> diretamente da sua prancha personalizada:
+            </p>
+
+            <div className="space-y-2.5">
+              {/* WhatsApp Direct */}
+              <button
+                onClick={() => {
+                  handleShareWhatsApp();
+                  setShowShareModal(false);
+                }}
+                className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-xl flex items-center justify-between shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <MessageCircle className="w-5 h-5 fill-white text-[#25D366]" />
+                  <span className="text-sm">Enviar pelo WhatsApp</span>
+                </div>
+                <Send className="w-4 h-4" />
+              </button>
+
+              {/* Instagram Stories Direct */}
+              <button
+                onClick={() => {
+                  handleShareInstagram();
+                  setShowShareModal(false);
+                }}
+                className="w-full py-3 px-4 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F56040] hover:opacity-95 text-white font-bold text-xs rounded-xl flex items-center justify-between shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Instagram className="w-5 h-5 text-white" />
+                  <span className="text-sm">Enviar no Instagram Stories</span>
+                </div>
+                <ExternalLink className="w-4 h-4" />
+              </button>
+
+              {/* Copy Image to Clipboard */}
+              <button
+                onClick={async () => {
+                  if (canvasRef.current) {
+                    await copyCanvasToClipboard(canvasRef.current);
+                    setShareNotice('Imagem PNG copiada para a área de transferência!');
+                    setTimeout(() => setShareNotice(null), 3000);
+                  }
+                  setShowShareModal(false);
+                }}
+                className="w-full py-3 px-4 bg-stone-100 hover:bg-stone-200 text-[#2B2B2B] font-bold text-xs rounded-xl flex items-center justify-between transition-all border border-stone-300 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Copy className="w-4 h-4 text-[#5B1E2D]" />
+                  <span>Copiar Imagem PNG (Área de Transferência)</span>
+                </div>
+                <Check className="w-4 h-4 text-emerald-600" />
+              </button>
+            </div>
+
+            <div className="pt-2 text-center text-[10px] text-[#6E6E6E] italic">
+              ✦ Adesivo em ultra resolução (2048p 4K) otimizado para a estética do Estúdio Tamiris Santana.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

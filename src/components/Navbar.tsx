@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Download, Smartphone, Layers, Search, Bell, Heart, User, Image as ImageIcon, Sparkle, Moon, Share2, Check } from 'lucide-react';
+import { Sparkles, Download, Smartphone, Layers, Search, Bell, Heart, User, Image as ImageIcon, Sparkle, Moon, Share2, Check, Copy, ExternalLink, X, Globe, MessageCircle } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story';
@@ -26,12 +26,57 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  const PUBLIC_SHARE_URL = 'https://ais-pre-xo4gsmrhe2iji5kpex2nfq-627952343829.us-west2.run.app';
+  const DEV_SHARE_URL = typeof window !== 'undefined' ? window.location.href : PUBLIC_SHARE_URL;
+
+  const handleCopyUrl = async (urlToCopy: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(urlToCopy);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = urlToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch (err) {
+      console.error('Fallback copy error:', err);
+      const textArea = document.createElement('textarea');
+      textArea.value = urlToCopy;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const handleShareApp = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
+    handleCopyUrl(PUBLIC_SHARE_URL);
+    setShowShareModal(true);
+  };
+
+  const handleWebShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Tamiris Santana - Galeria e Estúdio de Adesivos Stories 4K',
+          text: 'Acesse a coleção exclusiva de adesivos e estúdio de Stories 4K para harmonização facial e estética de luxo.',
+          url: PUBLIC_SHARE_URL,
+        });
+      } catch (e) {
+        console.log('Share canceled or not supported');
+      }
+    } else {
+      handleCopyUrl(PUBLIC_SHARE_URL);
+    }
   };
 
   return (
@@ -271,6 +316,99 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
       </div>
+
+      {/* Share App & Platform Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FAF8F5] text-[#2B2B2B] rounded-3xl border border-[#D4AF37]/40 max-w-md w-full p-6 shadow-2xl relative space-y-5 animate-fadeIn">
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-[#5B1E2D] hover:bg-[#5B1E2D]/10 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-[#D4AF37]/20 pb-3">
+              <div className="w-10 h-10 rounded-full bg-[#5B1E2D] text-[#D4AF37] flex items-center justify-center font-bold shadow-md shrink-0">
+                <Share2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif-title font-bold text-base text-[#5B1E2D]">
+                  Compartilhar Plataforma
+                </h3>
+                <p className="text-xs text-[#6E6E6E] font-light">
+                  Tamiris Santana • Galeria & Estúdio Stories 4K
+                </p>
+              </div>
+            </div>
+
+            {/* Public Link Card */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#5B1E2D] flex items-center justify-between">
+                <span>Link Público Direto (Modo Apresentação):</span>
+                {copiedLink && (
+                  <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Link Copiado!
+                  </span>
+                )}
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={PUBLIC_SHARE_URL}
+                  className="flex-1 bg-white border border-[#D4AF37]/40 rounded-xl px-3 py-2 text-xs font-mono text-[#2B2B2B] select-all focus:outline-none shadow-xs"
+                />
+                <button
+                  onClick={() => handleCopyUrl(PUBLIC_SHARE_URL)}
+                  className="px-4 py-2 bg-[#5B1E2D] hover:bg-[#3D141E] text-[#D4AF37] rounded-xl text-xs font-serif font-bold flex items-center gap-1.5 transition-all shadow-sm shrink-0 border border-[#D4AF37]/40"
+                >
+                  {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedLink ? 'Copiado' : 'Copiar'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Action Share Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                  `Confira a coleção exclusiva de adesivos Stories 4K e o Estúdio de Design de Tamiris Santana: ${PUBLIC_SHARE_URL}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>WhatsApp</span>
+              </a>
+
+              <button
+                onClick={handleWebShare}
+                className="py-2.5 px-3 rounded-xl bg-[#5B1E2D] hover:bg-[#3D141E] text-[#D4AF37] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all border border-[#D4AF37]/40"
+              >
+                <Globe className="w-4 h-4" />
+                <span>Enviar Via...</span>
+              </button>
+            </div>
+
+            {/* External Open Button */}
+            <div className="pt-2 border-t border-[#D4AF37]/20 flex justify-between items-center text-xs text-[#6E6E6E]">
+              <span className="text-[11px]">Abrir em nova aba:</span>
+              <a
+                href={PUBLIC_SHARE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#5B1E2D] font-bold hover:underline flex items-center gap-1"
+              >
+                <span>Acessar Link Direto</span>
+                <ExternalLink className="w-3.5 h-3.5 text-[#D4AF37]" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
