@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Sparkles, Download, Smartphone, Layers, Search, Bell, Heart, User, Image as ImageIcon, Sparkle, Moon, Share2, Check, Copy, ExternalLink, X, Globe, MessageCircle } from 'lucide-react';
+import { Sparkles, Download, Smartphone, Layers, Search, Bell, Heart, User, Image as ImageIcon, Sparkle, Moon, Share2, Check, Copy, ExternalLink, X, Globe, MessageCircle, Crown } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story';
-  setActiveTab: (tab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story') => void;
+  activeTab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo';
+  setActiveTab: (tab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo') => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   totalStickersCount: number;
@@ -281,6 +281,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Smartphone className="w-3.5 h-3.5" />
               <span>Simulador Story</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('destaques-logo')}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all border ${
+                activeTab === 'destaques-logo'
+                  ? 'bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-[#5B1E2D] border-[#D4AF37] shadow-md'
+                  : 'bg-[#4A1824]/50 text-[#D4AF37] border-[#D4AF37]/30 hover:bg-[#4A1824]'
+              }`}
+            >
+              <Crown className="w-3.5 h-3.5" />
+              <span>Destaques & Logo</span>
             </button>
 
             <button

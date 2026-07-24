@@ -9,6 +9,7 @@ import { PranchasSheetView } from './components/PranchasSheetView';
 import { UserProfileView } from './components/UserProfileView';
 import { OnboardingTour } from './components/OnboardingTour';
 import { StoryEffectsCatalog } from './components/StoryEffectsCatalog';
+import { HighlightLogoCreator } from './components/HighlightLogoCreator';
 import { STICKERS_DATA } from './data/stickersData';
 import { CategoryId, VisualStyle, StickerItem } from './types';
 import { renderStickerToCanvas } from './utils/stickerRenderer';
@@ -24,7 +25,7 @@ import {
 import { User } from 'firebase/auth';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story'>('library');
+  const [activeTab, setActiveTab] = useState<'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo'>('library');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'all' | 'favorites'>('all');
   const [selectedStyle, setSelectedStyle] = useState<VisualStyle | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -294,6 +295,10 @@ export default function App() {
                 setFavoritesList(updatedFavs);
               }}
             />
+          )}
+
+          {activeTab === 'destaques-logo' && (
+            <HighlightLogoCreator />
           )}
         </main>
 

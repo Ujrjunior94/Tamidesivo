@@ -174,7 +174,6 @@ export function renderStickerToCanvas(
     ctx.shadowBlur = 8 * scaleRatio;
 
     const padX = fontSize * 1.5;
-    const padY = fontSize * 0.9;
     const rw = Math.min(width * 0.9, (state.text.length * fontSize * 0.5) + padX + iconSz);
     const rh = fontSize * 2.0 + (state.subtext ? fontSize * 0.8 : 0) + (state.iconPosition === 'top' || state.iconPosition === 'bottom' ? iconSz : 0);
     const rx = cx - rw / 2;
@@ -210,6 +209,140 @@ export function renderStickerToCanvas(
     drawFineSparkle(rx + 10 * scaleRatio, ry + rh - 10 * scaleRatio);
     drawFineSparkle(rx + rw - 10 * scaleRatio, ry + rh - 10 * scaleRatio);
 
+    ctx.restore();
+  } else if (state.styleEffect === 'Luxo') {
+    // Elegant luxury double frame with diamond corner sparkles
+    ctx.save();
+    ctx.strokeStyle = state.gradientStart || '#D4AF37';
+    ctx.lineWidth = Math.max(1.5, 2 * scaleRatio);
+    ctx.shadowColor = 'rgba(212, 175, 55, 0.35)';
+    ctx.shadowBlur = 12 * scaleRatio;
+
+    const padX = fontSize * 1.6;
+    const rw = Math.min(width * 0.9, (state.text.length * fontSize * 0.52) + padX + iconSz);
+    const rh = fontSize * 2.1 + (state.subtext ? fontSize * 0.8 : 0);
+    const rx = cx - rw / 2;
+    const ry = cy - rh / 2;
+
+    // Draw outer golden border
+    ctx.beginPath();
+    ctx.roundRect(rx, ry, rw, rh, 16 * scaleRatio);
+    ctx.stroke();
+
+    // Draw inner thin border
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
+    ctx.lineWidth = Math.max(0.75, 1 * scaleRatio);
+    ctx.beginPath();
+    ctx.roundRect(rx + 6 * scaleRatio, ry + 6 * scaleRatio, rw - 12 * scaleRatio, rh - 12 * scaleRatio, 12 * scaleRatio);
+    ctx.stroke();
+
+    // Draw subtle premium diamond sparkles at corners
+    const drawSparkle = (sx: number, sy: number) => {
+      ctx.fillStyle = state.gradientStart || '#D4AF37';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 8 * scaleRatio);
+      ctx.quadraticCurveTo(sx, sy, sx + 8 * scaleRatio, sy);
+      ctx.quadraticCurveTo(sx, sy, sx, sy + 8 * scaleRatio);
+      ctx.quadraticCurveTo(sx, sy, sx - 8 * scaleRatio, sy);
+      ctx.quadraticCurveTo(sx, sy, sx, sy - 8 * scaleRatio);
+      ctx.fill();
+    };
+    drawSparkle(rx, ry);
+    drawSparkle(rx + rw, ry);
+    drawSparkle(rx, ry + rh);
+    drawSparkle(rx + rw, ry + rh);
+    ctx.restore();
+  } else if (state.styleEffect === 'Black Edition') {
+    // Dark matte black premium card
+    ctx.save();
+    ctx.fillStyle = '#111111';
+    ctx.strokeStyle = state.gradientStart || '#D4AF37';
+    ctx.lineWidth = Math.max(2.5, 3 * scaleRatio);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 24 * scaleRatio;
+
+    const padX = fontSize * 1.5;
+    const rw = Math.min(width * 0.88, (state.text.length * fontSize * 0.55) + padX + iconSz);
+    const rh = fontSize * 1.9 + (state.subtext ? fontSize * 0.8 : 0);
+    const rx = cx - rw / 2;
+    const ry = cy - rh / 2;
+
+    ctx.beginPath();
+    ctx.roundRect(rx, ry, rw, rh, 20 * scaleRatio);
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner gold fine line accent
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.25)';
+    ctx.lineWidth = 1 * scaleRatio;
+    ctx.beginPath();
+    ctx.roundRect(rx + 6 * scaleRatio, ry + 6 * scaleRatio, rw - 12 * scaleRatio, rh - 12 * scaleRatio, 14 * scaleRatio);
+    ctx.stroke();
+    ctx.restore();
+  } else if (state.styleEffect === 'Aquarela') {
+    // Soft watercolor blob effect in background
+    ctx.save();
+    const baseColor = state.gradientStart || '#B76E79';
+    const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, width * 0.42);
+    grad.addColorStop(0, `${baseColor}66`); // 40% opacity
+    grad.addColorStop(0.6, `${baseColor}22`); // 13% opacity
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, width * 0.45, height * 0.22, 0.05, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(cx - 30 * scaleRatio, cy + 15 * scaleRatio, width * 0.38, height * 0.25, -0.05, 0, Math.PI * 2);
+    ctx.fillStyle = `${baseColor}15`;
+    ctx.fill();
+    ctx.restore();
+  } else if (state.styleEffect === 'Vintage') {
+    // Vintage retro style stamp border
+    ctx.save();
+    ctx.strokeStyle = state.textColor || '#D4AF37';
+    ctx.lineWidth = Math.max(1.5, 2 * scaleRatio);
+
+    const padX = fontSize * 1.5;
+    const rw = Math.min(width * 0.88, (state.text.length * fontSize * 0.55) + padX + iconSz);
+    const rh = fontSize * 1.8 + (state.subtext ? fontSize * 0.8 : 0);
+    const rx = cx - rw / 2;
+    const ry = cy - rh / 2;
+
+    ctx.beginPath();
+    ctx.roundRect(rx, ry, rw, rh, 8 * scaleRatio);
+    ctx.stroke();
+
+    ctx.setLineDash([8 * scaleRatio, 6 * scaleRatio]);
+    ctx.strokeStyle = 'rgba(139, 90, 43, 0.45)';
+    ctx.beginPath();
+    ctx.roundRect(rx + 6 * scaleRatio, ry + 6 * scaleRatio, rw - 12 * scaleRatio, rh - 12 * scaleRatio, 4 * scaleRatio);
+    ctx.stroke();
+    ctx.restore();
+  } else if (state.styleEffect === 'Cyberpunk') {
+    // Cyan and Magenta background neon glitched block
+    ctx.save();
+    ctx.strokeStyle = '#FF007F';
+    ctx.lineWidth = Math.max(2, 2.5 * scaleRatio);
+    ctx.shadowColor = '#FF007F';
+    ctx.shadowBlur = 12 * scaleRatio;
+
+    const padX = fontSize * 1.4;
+    const rw = Math.min(width * 0.88, (state.text.length * fontSize * 0.55) + padX + iconSz);
+    const rh = fontSize * 1.8 + (state.subtext ? fontSize * 0.8 : 0);
+    const rx = cx - rw / 2;
+    const ry = cy - rh / 2;
+
+    ctx.beginPath();
+    ctx.roundRect(rx - 2 * scaleRatio, ry + 2 * scaleRatio, rw, rh, 4 * scaleRatio);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#00F2FE';
+    ctx.shadowColor = '#00F2FE';
+    ctx.beginPath();
+    ctx.roundRect(rx + 2 * scaleRatio, ry - 2 * scaleRatio, rw, rh, 4 * scaleRatio);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -274,6 +407,26 @@ export function renderStickerToCanvas(
     ctx.restore();
   }
 
+  // 2.5 3D Extrusion Pass (3D Style)
+  if (state.styleEffect === '3D' && !isCircular && !isSpiral && !isCurva) {
+    ctx.save();
+    const depth = 12 * scaleRatio;
+    ctx.font = `bold ${fontSize}px ${getFontFamilyCSS(state.fontFamily)}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = state.gradientEnd || '#3D141E'; // Dark color for depth
+    for (let i = 1; i <= depth; i++) {
+      ctx.fillText(state.text, cx - i * 0.8, textY + i * 0.8);
+    }
+    if (state.subtext) {
+      ctx.font = `bold ${fontSize * 0.55}px ${getFontFamilyCSS(state.fontFamily)}`;
+      for (let i = 1; i <= depth * 0.5; i++) {
+        ctx.fillText(state.subtext, cx - i * 0.8, cy + fontSize * 0.65 + i * 0.8);
+      }
+    }
+    ctx.restore();
+  }
+
   // 3. Fill Text Pass (Gradient or Solid)
   ctx.save();
   if (state.hasGradient) {
@@ -282,7 +435,7 @@ export function renderStickerToCanvas(
     grad.addColorStop(0, state.gradientStart || '#FF7E5F');
     grad.addColorStop(1, state.gradientEnd || '#FEB47B');
     ctx.fillStyle = grad;
-  } else if (state.styleEffect === 'Gold') {
+  } else if (state.styleEffect === 'Gold' || state.styleEffect === 'Luxo' || state.styleEffect === 'Black Edition') {
     const grad = ctx.createLinearGradient(cx - 150, cy - 50, cx + 150, cy + 50);
     grad.addColorStop(0, '#BF953F');
     grad.addColorStop(0.25, '#FCF6BA');
@@ -297,6 +450,18 @@ export function renderStickerToCanvas(
     grad.addColorStop(0.5, '#999999');
     grad.addColorStop(0.8, '#EEEEEE');
     grad.addColorStop(1, '#777777');
+    ctx.fillStyle = grad;
+  } else if (state.styleEffect === 'Vintage') {
+    const grad = ctx.createLinearGradient(cx - 150, cy - 50, cx + 150, cy + 50);
+    grad.addColorStop(0, '#8B5A2B');
+    grad.addColorStop(0.5, '#D2B48C');
+    grad.addColorStop(1, '#5C3A21');
+    ctx.fillStyle = grad;
+  } else if (state.styleEffect === 'Cyberpunk') {
+    const grad = ctx.createLinearGradient(cx - 150, cy - 50, cx + 150, cy + 50);
+    grad.addColorStop(0, '#00F2FE');
+    grad.addColorStop(0.5, '#FF007F');
+    grad.addColorStop(1, '#7F00FF');
     ctx.fillStyle = grad;
   } else if (state.styleEffect === 'Holográfico') {
     const grad = ctx.createLinearGradient(cx - 200, cy - 50, cx + 200, cy + 50);

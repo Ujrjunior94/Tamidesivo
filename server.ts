@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: "20mb" }));
 
@@ -355,8 +355,8 @@ async function startServer() {
     app.use(vite.middlewares);
 
     // Fallback for SPA routing in development mode
-    app.get("*", async (req, res, next) => {
-      if (req.originalUrl.startsWith("/api")) return next();
+    app.use(async (req, res, next) => {
+      if (req.method !== "GET" || req.originalUrl.startsWith("/api")) return next();
       try {
         const fs = await import("fs");
         const url = req.originalUrl;
@@ -371,13 +371,16 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (req.method === "GET" && !req.path.startsWith("/api")) {
+        return res.sendFile(path.join(distPath, "index.html"));
+      }
+      next();
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`StickerMaster Express Server rodando em http://0.0.0.0:${PORT}`);
+    console.log(`StickerMaster Express Server rodando na porta ${PORT}`);
   });
 }
 

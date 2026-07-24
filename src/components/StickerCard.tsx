@@ -9,6 +9,8 @@ interface StickerCardProps {
   onTestInStory: (sticker: StickerItem) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export const StickerCard: React.FC<StickerCardProps> = ({
@@ -17,6 +19,8 @@ export const StickerCard: React.FC<StickerCardProps> = ({
   onTestInStory,
   isFavorite = false,
   onToggleFavorite,
+  isSelected = false,
+  onToggleSelect,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [copied, setCopied] = useState(false);
@@ -164,13 +168,40 @@ export const StickerCard: React.FC<StickerCardProps> = ({
   };
 
   return (
-    <div className="group relative bg-[#FFFFFF] border border-[#D4AF37]/30 rounded-[24px] p-4 transition-all duration-300 hover:shadow-xl hover:shadow-[#5B1E2D]/10 hover:border-[#D4AF37]/60 flex flex-col justify-between">
+    <div
+      className={`group relative bg-[#FFFFFF] border rounded-[24px] p-4 transition-all duration-300 hover:shadow-xl hover:shadow-[#5B1E2D]/10 flex flex-col justify-between ${
+        isSelected
+          ? 'border-2 border-[#D4AF37] bg-[#5B1E2D]/5 shadow-lg shadow-[#D4AF37]/20 ring-2 ring-[#D4AF37]/50'
+          : 'border-[#D4AF37]/30 hover:border-[#D4AF37]/60'
+      }`}
+    >
       
-      {/* Top Header info */}
+      {/* Top Header info with Checkbox */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#EFE8DF] text-[#5B1E2D] border border-[#D4AF37]/30 font-body">
-          {sticker.category.replace('-', ' ')}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Checkbox selector */}
+          {onToggleSelect && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect(sticker.id);
+              }}
+              className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
+                isSelected
+                  ? 'bg-[#5B1E2D] border-[#D4AF37] text-[#D4AF37] shadow-sm'
+                  : 'bg-white/90 border-[#D4AF37]/50 hover:border-[#5B1E2D] text-transparent hover:text-stone-300'
+              }`}
+              title={isSelected ? 'Desmarcar adesivo' : 'Selecionar adesivo para exportação ZIP'}
+            >
+              <Check className={`w-4 h-4 stroke-[3] ${isSelected ? 'text-[#D4AF37]' : ''}`} />
+            </button>
+          )}
+
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#EFE8DF] text-[#5B1E2D] border border-[#D4AF37]/30 font-body">
+            {sticker.category.replace('-', ' ')}
+          </span>
+        </div>
 
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#5B1E2D] text-[#D4AF37] border border-[#D4AF37]">

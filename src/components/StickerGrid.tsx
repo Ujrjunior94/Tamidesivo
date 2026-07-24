@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StickerItem, CategoryId, VisualStyle } from '../types';
 import { StickerCard } from './StickerCard';
 import { CATEGORIES } from '../data/stickersData';
 import { BigCategoryCards } from './BigCategoryCards';
 import { FeaturedBannerCarousel } from './FeaturedBannerCarousel';
-import { Sparkles, SearchX, Crown, Star } from 'lucide-react';
+import { renderStickerToCanvas } from '../utils/stickerRenderer';
+import JSZip from 'jszip';
+import {
+  Sparkles,
+  SearchX,
+  Crown,
+  CheckSquare,
+  Square,
+  Archive,
+  RefreshCw,
+  X,
+  Check,
+  Download,
+} from 'lucide-react';
 
 interface StickerGridProps {
   stickers: StickerItem[];
@@ -30,6 +43,108 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
   onToggleFavorite,
 }) => {
   const currentCategoryInfo = CATEGORIES.find((c) => c.id === selectedCategory);
+
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<string>('');
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === stickers.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(stickers.map((s) => s.id));
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExportSelectedZip = async () => {
+    if (selectedIds.length === 0) return;
+
+    setIsExporting(true);
+    setExportProgress('Iniciando empacotamento ZIP...');
+
+    try {
+      const selectedStickers = stickers.filter((s) => selectedIds.includes(s.id));
+      const zip = new JSZip();
+      const folder = zip.folder('Tamiris-Santana-Colecao-Adesivos-4K') || zip;
+
+      for (let i = 0; i < selectedStickers.length; i++) {
+        const sticker = selectedStickers[i];
+        setExportProgress(`Processando ${i + 1}/${selectedStickers.length}: "${sticker.title}"...`);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 2048;
+        canvas.height = 2048;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx) {
+          renderStickerToCanvas(ctx, 2048, 2048, {
+            text: sticker.title,
+            fontFamily: sticker.fontFamily || 'Script Elegante',
+            fontSize: sticker.title.length > 15 ? 210 : 260,
+            textColor: sticker.textColor || '#FFFFFF',
+            gradientStart: sticker.primaryColor || '#D4AF37',
+            gradientEnd: sticker.primaryColor ? '#5B1E2D' : '#D4AF37',
+            hasGradient: true,
+            strokeColor: '#FFFFFF',
+            strokeWidth: 45,
+            glowColor: sticker.primaryColor || '#D4AF37',
+            glowRadius: sticker.style === 'Neon' ? 80 : 0,
+            shadowColor: 'rgba(91, 30, 45, 0.3)',
+            shadowOffsetY: 30,
+            shadowBlur: 45,
+            iconSymbol: sticker.iconSymbol || 'Sparkles',
+            iconPosition: 'top',
+            iconSize: 260,
+            styleEffect: sticker.style,
+            rotation: 0,
+            glassOpacity: 0.22,
+            aspectRatio: '1:1',
+            exportResolution: '2048',
+          });
+
+          const dataUrl = canvas.toDataURL('image/png');
+          const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+          const safeFileName = `${i + 1}-${sticker.title.toLowerCase().replace(/[^a-z0-9]/gi, '-')}-4k.png`;
+          folder.file(safeFileName, base64Data, { base64: true });
+        }
+      }
+
+      setExportProgress('Gerando arquivo ZIP final...');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `tamiris-santana-${selectedStickers.length}-adesivos-4k.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setToastNotice(`✨ Pacote ZIP baixado com sucesso contendo ${selectedStickers.length} adesivos em 4K!`);
+      setTimeout(() => setToastNotice(null), 4000);
+    } catch (err) {
+      console.error('Error generating ZIP:', err);
+      alert('Ocorreu um erro ao gerar o arquivo ZIP dos adesivos.');
+    } finally {
+      setIsExporting(false);
+      setExportProgress('');
+    }
+  };
+
+  const allSelected = stickers.length > 0 && selectedIds.length === stickers.length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
@@ -82,25 +197,69 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
         </div>
       )}
 
-      {/* 4. Section Title for Grid */}
-      <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-3">
+      {/* Toast Notice Banner */}
+      {toastNotice && (
+        <div className="p-3 bg-emerald-50 border-2 border-emerald-400 text-emerald-900 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-md animate-sticker-fade-in">
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600" />
+            <span>{toastNotice}</span>
+          </div>
+          <button onClick={() => setToastNotice(null)} className="text-emerald-700 font-bold hover:text-emerald-900 text-sm">
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* 4. Section Title & Batch Selection Controls for Grid */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D4AF37]/20 pb-3">
         <div>
           <h2 className="text-xl font-serif-title font-bold text-[#2B2B2B] flex items-center gap-2">
             <Crown className="w-5 h-5 text-[#D4AF37]" />
             {selectedCategory === 'favorites' ? 'Seus Adesivos Favoritos' : 'Galeria de Adesivos & Letterings'}
           </h2>
           <p className="text-xs text-[#6E6E6E] font-light">
-            Exibindo {stickers.length} adesivos com acabamento em transparência alpha
+            Exibindo {stickers.length} adesivos • Selecione múltiplos adesivos para exportação de lote em ZIP
           </p>
         </div>
 
-        <button
-          onClick={onOpenPromptMaster}
-          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-[#5B1E2D] text-[#D4AF37] hover:bg-[#8B2D44] font-serif text-xs font-bold transition-all shadow-sm border border-[#D4AF37]/40"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
-          <span>Criar com IA</span>
-        </button>
+        {/* Multi-Select Toolbar Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {stickers.length > 0 && (
+            <button
+              onClick={handleSelectAll}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                allSelected
+                  ? 'bg-[#5B1E2D] text-[#D4AF37] border-[#D4AF37]'
+                  : 'bg-white text-[#2B2B2B] border-[#D4AF37]/40 hover:border-[#5B1E2D]'
+              }`}
+            >
+              {allSelected ? (
+                <CheckSquare className="w-4 h-4 text-[#D4AF37]" />
+              ) : (
+                <Square className="w-4 h-4 text-[#5B1E2D]" />
+              )}
+              <span>{allSelected ? 'Desmarcar Todos' : `Selecionar Todos (${stickers.length})`}</span>
+            </button>
+          )}
+
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleDeselectAll}
+              className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold border border-stone-300 transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Limpar ({selectedIds.length})</span>
+            </button>
+          )}
+
+          <button
+            onClick={onOpenPromptMaster}
+            className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full bg-[#5B1E2D] text-[#D4AF37] hover:bg-[#8B2D44] font-serif text-xs font-bold transition-all shadow-sm border border-[#D4AF37]/40"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span>Criar com IA</span>
+          </button>
+        </div>
       </div>
 
       {/* 5. Grid of Stickers */}
@@ -114,6 +273,8 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
               onTestInStory={onTestInStory}
               isFavorite={favoritesList.includes(sticker.id)}
               onToggleFavorite={onToggleFavorite}
+              isSelected={selectedIds.includes(sticker.id)}
+              onToggleSelect={handleToggleSelect}
             />
           ))}
         </div>
@@ -136,7 +297,56 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
           </button>
         </div>
       )}
+
+      {/* 6. Floating Batch Action Bar (for Designer Workflow) */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[92%] sm:w-full bg-[#5B1E2D] text-[#F8F6F3] border-2 border-[#D4AF37] rounded-full p-2.5 px-5 shadow-2xl flex items-center justify-between gap-3 animate-sticker-scale-up">
+          <div className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-full bg-[#D4AF37] text-[#5B1E2D] font-extrabold text-xs flex items-center justify-center shadow-sm">
+              {selectedIds.length}
+            </span>
+            <div className="text-xs">
+              <p className="font-serif font-bold text-[#D4AF37]">
+                {selectedIds.length === 1 ? '1 Adesivo Selecionado' : `${selectedIds.length} Adesivos Selecionados`}
+              </p>
+              <p className="text-[10px] text-[#EFE8DF] font-light hidden sm:block">
+                Exportação em Lote PNG 4K Transparente
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportSelectedZip}
+              disabled={isExporting}
+              className="py-2 px-4 rounded-full bg-[#D4AF37] hover:bg-[#E5C158] text-[#5B1E2D] font-serif font-bold text-xs flex items-center gap-2 shadow-lg border border-white/40 disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {isExporting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-[#5B1E2D] animate-spin" />
+                  <span className="hidden sm:inline">{exportProgress || 'Gerando ZIP...'}</span>
+                  <span className="sm:hidden">ZIP...</span>
+                </>
+              ) : (
+                <>
+                  <Archive className="w-4 h-4 text-[#5B1E2D]" />
+                  <span>Baixar Lote ZIP (4K)</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleDeselectAll}
+              className="p-2 rounded-full hover:bg-white/10 text-[#EFE8DF] transition-all"
+              title="Cancelar seleção"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
 

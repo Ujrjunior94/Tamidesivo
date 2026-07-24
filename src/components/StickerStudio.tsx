@@ -61,6 +61,11 @@ const AESTHETIC_TRENDS = [
   { id: 'Harmonização Facial Gold', label: 'Harmonização Facial Gold', colors: ['#D4AF37', '#5B1E2D'], desc: 'Ouro Champagne & Vinho Bordeux Nobilíssimo' },
   { id: 'Glow Rose Gold & Nude', label: 'Glow Rose Gold & Nude', colors: ['#B76E79', '#FAF9F6'], desc: 'Rose Gold Aveludado & Off-White Nude' },
   { id: 'Bordeaux Luxury Velvet', label: 'Bordeaux Luxury Velvet', colors: ['#4A121A', '#E6C687'], desc: 'Vinho Bordeaux Profundo & Ouro Foil' },
+  { id: 'Pérola & Ouro Rosé Soft', label: 'Pérola & Ouro Rosé Soft', colors: ['#FFF2F2', '#B76E79'], desc: 'Pele Saudável de Pérola & Rosé Delicado' },
+  { id: 'Clinical Diamond & Champagne', label: 'Clinical Diamond & Champagne', colors: ['#E0F2FE', '#D4AF37'], desc: 'Brilho Diamante Límpido & Champagne Real' },
+  { id: 'Bordeaux Imperial Rose', label: 'Bordeaux Imperial Rose', colors: ['#5B1E2D', '#FFB7C5'], desc: 'Vinho Nobre Imperial & Pétala de Rosas' },
+  { id: 'Jade Menta & Golden Glow', label: 'Jade Menta & Golden Glow', colors: ['#A3D9C9', '#F3E5AB'], desc: 'Verde Jade Calmante & Ouro Fino' },
+  { id: 'Nude Cacau & Bronze Real', label: 'Nude Cacau & Bronze Real', colors: ['#D2B48C', '#8B5A2B'], desc: 'Nude Orgânico Terroso & Acabamento Bronze' },
   { id: 'Clean Clinical Mint & Crystal', label: 'Clean Clinical Mint & Crystal', colors: ['#A3E635', '#E0F2FE'], desc: 'Verde Menta Muted & Prata Cristalino' },
   { id: 'Obsidian Black & Diamond', label: 'Obsidian Black & Diamond', colors: ['#1A1A1A', '#F59E0B'], desc: 'Preto Fosco Nobre & Dourado Metálico' },
   { id: 'Glow Botulínico & Pérola', label: 'Glow Botulínico & Pérola', colors: ['#EC4899', '#FFF1F2'], desc: 'Rosa Glow Procedimento & Pérola Suave' },
@@ -1167,7 +1172,33 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
             )}
           </div>
 
-          <div className="pt-4 border-t border-[#D4AF37]/20 flex justify-end">
+          <div className="pt-4 border-t border-[#D4AF37]/20 flex justify-end gap-3">
+            {onSaveCustomSticker && (
+              <button
+                onClick={() => {
+                  const newSticker: StickerItem = {
+                    id: `cust-${Date.now()}`,
+                    title: state.text,
+                    category: sticker?.category || 'estetica-facial',
+                    style: state.styleEffect,
+                    tags: ['customizado', 'estudio', state.styleEffect.toLowerCase()],
+                    iconSymbol: state.iconSymbol !== 'none' ? state.iconSymbol : undefined,
+                    elements: state.subtext ? [state.subtext] : [],
+                    primaryColor: state.gradientStart,
+                    textColor: state.textColor,
+                    fontFamily: state.fontFamily,
+                    isCustomGenerated: true,
+                  };
+                  onSaveCustomSticker(newSticker);
+                  setShareNotice('Adesivo salvo com sucesso na sua galeria!');
+                  setTimeout(() => setShareNotice(null), 3000);
+                }}
+                className="px-6 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#AA771C] hover:opacity-95 text-[#5B1E2D] font-serif font-bold text-xs rounded-xl transition-all shadow-md border border-[#D4AF37]/40 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Salvar na Galeria</span>
+              </button>
+            )}
             <button
               onClick={onClose}
               className="px-6 py-2.5 bg-[#5B1E2D] hover:bg-[#8B2D44] text-[#D4AF37] font-serif font-bold text-xs rounded-xl transition-all shadow-md border border-[#D4AF37]/40"

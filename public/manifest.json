@@ -1,0 +1,25 @@
+{
+  "name": "Tamiris Santana • Estúdio de Adesivos",
+  "short_name": "StickerMaster",
+  "description": "Estúdio premium de criação de adesivos e caligrafias de luxo para profissionais de Harmonização Facial e Estética Avançada.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F6F3",
+  "theme_color": "#5B1E2D",
+  "orientation": "portrait-primary",
+  "categories": ["design", "photo"],
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/stickerlogo/192/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://picsum.photos/seed/stickerlogo/512/512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
