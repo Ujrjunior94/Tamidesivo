@@ -23,7 +23,10 @@ export function getPublicShareUrl(): string {
     if (origin.includes('ais-dev-')) {
       return origin.replace('ais-dev-', 'ais-pre-');
     }
-    return origin;
+    if (origin.includes('ais-pre-')) {
+      return origin;
+    }
+    return defaultUrl;
   } catch (err) {
     return defaultUrl;
   }
@@ -39,6 +42,9 @@ export function sanitizeShareUrl(url?: string): string {
   try {
     if (url.includes('ais-dev-')) {
       return url.replace('ais-dev-', 'ais-pre-');
+    }
+    if (url.includes('localhost') || url.includes('127.0.0.1') || !url.includes('ais-pre-')) {
+      return defaultUrl;
     }
     return url;
   } catch (err) {
