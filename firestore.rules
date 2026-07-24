@@ -2,8 +2,118 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 1. Global Safety Net - Default Deny
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definitions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper to validate sticker shape
+    function isValidSticker(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 100
+        && data.category is string && data.category.size() <= 100
+        && (!('createdBy' in data) || (data.createdBy is string && data.createdBy.size() <= 128));
+    }
+
+    // Helper to validate favorites shape
+    function isValidFavorites(data) {
+      return data.userId is string && data.userId.size() <= 128
+        && (!('stickerIds' in data) || (data.stickerIds is list && data.stickerIds.size() <= 500));
+    }
+
+    // Helper to validate user_configs shape
+    function isValidUserConfig(data) {
+      return data.userId is string && data.userId.size() <= 128
+        && (!('activeTab' in data) || (data.activeTab is string && data.activeTab.size() <= 100))
+        && (!('customBrandColor' in data) || (data.customBrandColor is string && data.customBrandColor.size() <= 50));
+    }
+
+    // 2. Stickers Collection
+    match /stickers/{stickerId} {
+      // Public view of stickers is allowed
+      allow get, list: if true;
+      
+      // Creating stickers is restricted to authenticated users
+      allow create: if isSignedIn()
+        && isValidId(stickerId)
+        && isValidSticker(incoming())
+        && incoming().createdBy == request.auth.uid
+        && incoming().createdAt == request.time;
+        
+      // Updating stickers is restricted to the owner/creator
+      allow update: if isSignedIn()
+        && isValidId(stickerId)
+        && isValidSticker(incoming())
+        && existing().createdBy == request.auth.uid
+        && incoming().createdBy == existing().createdBy
+        && incoming().createdAt == existing().createdAt;
+        
+      // Deleting stickers is restricted to the owner/creator
+      allow delete: if isSignedIn()
+        && isValidId(stickerId)
+        && existing().createdBy == request.auth.uid;
+    }
+
+    // 3. Favorites Collection
+    match /favorites/{userId} {
+      // Users can only read their own favorites document
+      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow list: if isSignedIn() && userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && userId == request.auth.uid
+        && isValidId(userId)
+        && isValidFavorites(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && userId == request.auth.uid
+        && isValidId(userId)
+        && isValidFavorites(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time;
+
+      allow delete: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    // 4. User Configurations Collection
+    match /user_configs/{userId} {
+      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow list: if isSignedIn() && userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && userId == request.auth.uid
+        && isValidId(userId)
+        && isValidUserConfig(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && userId == request.auth.uid
+        && isValidId(userId)
+        && isValidUserConfig(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time;
+
+      allow delete: if isSignedIn() && userId == request.auth.uid;
     }
   }
 }

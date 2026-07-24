@@ -9,8 +9,55 @@ import {
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { StickerItem } from '../types';
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 /**
  * Real-time listener for cloud-synced custom stickers
@@ -45,11 +92,11 @@ export function subscribeToCustomStickers(onStickersUpdated: (stickers: StickerI
         onStickersUpdated(stickers);
       },
       (error) => {
-        console.error('Firestore custom stickers sync error:', error);
+        handleFirestoreError(error, OperationType.LIST, 'stickers');
       }
     );
   } catch (err) {
-    console.error('Error establishing Firestore sticker subscription:', err);
+    handleFirestoreError(err, OperationType.LIST, 'stickers');
     return () => {};
   }
 }
@@ -70,7 +117,7 @@ export async function saveCustomStickerToCloud(sticker: StickerItem, userId?: st
       { merge: true }
     );
   } catch (err) {
-    console.error('Failed to save sticker to Firestore:', err);
+    handleFirestoreError(err, OperationType.WRITE, `stickers/${sticker.id}`);
   }
 }
 
@@ -91,11 +138,11 @@ export function subscribeToFavorites(userId: string, onFavoritesUpdated: (favori
         }
       },
       (error) => {
-        console.error('Firestore favorites sync error:', error);
+        handleFirestoreError(error, OperationType.GET, `favorites/${userId}`);
       }
     );
   } catch (err) {
-    console.error('Error subscribing to favorites:', err);
+    handleFirestoreError(err, OperationType.GET, `favorites/${userId}`);
     return () => {};
   }
 }
@@ -112,7 +159,7 @@ export async function syncFavoritesToCloud(userId: string, favoritesList: string
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (err) {
-    console.error('Failed to sync favorites to Firestore:', err);
+    handleFirestoreError(err, OperationType.WRITE, `favorites/${userId}`);
   }
 }
 
@@ -128,7 +175,7 @@ export async function syncUserConfigToCloud(userId: string, configData: Record<s
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (err) {
-    console.error('Failed to sync user config to Firestore:', err);
+    handleFirestoreError(err, OperationType.WRITE, `user_configs/${userId}`);
   }
 }
 
@@ -138,13 +185,19 @@ export async function syncUserConfigToCloud(userId: string, configData: Record<s
 export function subscribeToUserConfig(userId: string, onConfigUpdated: (data: Record<string, any>) => void) {
   try {
     const configRef = doc(db, 'user_configs', userId);
-    return onSnapshot(configRef, (docSnap) => {
-      if (docSnap.exists()) {
-        onConfigUpdated(docSnap.data());
+    return onSnapshot(
+      configRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          onConfigUpdated(docSnap.data());
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, `user_configs/${userId}`);
       }
-    });
+    );
   } catch (err) {
-    console.error('Error subscribing to user config:', err);
+    handleFirestoreError(err, OperationType.GET, `user_configs/${userId}`);
     return () => {};
   }
 }
