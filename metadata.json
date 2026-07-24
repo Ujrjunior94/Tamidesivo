@@ -1,0 +1,6 @@
+{
+  "name": "StickerMaster Premium - Adesivos para Instagram & WhatsApp",
+  "description": "Coleção premium e estúdio de adesivos digitais PNG com fundo transparente para Instagram Stories, Reels e WhatsApp. Gerador de prompts IA Gemini e customizador HD.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
