@@ -81,6 +81,7 @@ export interface StickerCustomizerState {
   iconPosition: 'top' | 'left' | 'right' | 'bottom' | 'background' | 'none';
   iconSize: number;
   styleEffect: VisualStyle;
+  aestheticFilter?: 'Normal' | 'Dourado Glow' | 'Vintage Matte' | 'Crystal Contrast' | 'Bordeaux Chic' | 'Rose Gold Soft' | 'Nude Minimal';
   rotation: number;
   glassOpacity: number;
   aspectRatio: '1:1' | '16:9' | '9:16' | '4:3';

@@ -338,6 +338,139 @@ export function renderStickerToCanvas(
 
   ctx.restore();
   ctx.restore();
+
+  // Apply Real-time Canvas Color Correction Aesthetic Filters
+  if (state.aestheticFilter && state.aestheticFilter !== 'Normal') {
+    applyAestheticFilter(ctx, width, height, state.aestheticFilter);
+  }
+}
+
+export function applyAestheticFilter(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  filterName: string
+) {
+  if (!filterName || filterName === 'Normal') return;
+
+  ctx.save();
+  if (filterName === 'Dourado Glow') {
+    ctx.globalCompositeOperation = 'source-atop';
+    const grad = ctx.createRadialGradient(width / 2, height / 2, 20, width / 2, height / 2, width * 0.6);
+    grad.addColorStop(0, 'rgba(212, 175, 55, 0.35)');
+    grad.addColorStop(0.7, 'rgba(243, 229, 171, 0.20)');
+    grad.addColorStop(1, 'rgba(212, 175, 55, 0.05)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        data[i] = Math.min(255, data[i] * 1.08 + 15);
+        data[i + 1] = Math.min(255, data[i + 1] * 1.05 + 10);
+        data[i + 2] = Math.min(255, data[i + 2] * 0.90);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+  } else if (filterName === 'Vintage Matte') {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        let sr = (r * 0.393) + (g * 0.769) + (b * 0.189);
+        let sg = (r * 0.349) + (g * 0.686) + (b * 0.168);
+        let sb = (r * 0.272) + (g * 0.534) + (b * 0.131);
+
+        r = r * 0.6 + sr * 0.4;
+        g = g * 0.6 + sg * 0.4;
+        b = b * 0.6 + sb * 0.4;
+
+        data[i] = Math.min(255, r * 0.9 + 25);
+        data[i + 1] = Math.min(255, g * 0.9 + 20);
+        data[i + 2] = Math.min(255, b * 0.9 + 18);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+  } else if (filterName === 'Crystal Contrast') {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        r = (r - 128) * 1.22 + 128;
+        g = (g - 128) * 1.22 + 128;
+        b = (b - 128) * 1.22 + 128;
+
+        data[i] = Math.max(0, Math.min(255, r * 0.95));
+        data[i + 1] = Math.max(0, Math.min(255, g * 1.05));
+        data[i + 2] = Math.max(0, Math.min(255, b * 1.15 + 10));
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+  } else if (filterName === 'Bordeaux Chic') {
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = 'rgba(91, 30, 45, 0.25)';
+    ctx.fillRect(0, 0, width, height);
+
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        data[i] = Math.min(255, data[i] * 1.15 + 10);
+        data[i + 1] = Math.max(0, data[i + 1] * 0.88);
+        data[i + 2] = Math.max(0, data[i + 2] * 0.92);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+  } else if (filterName === 'Rose Gold Soft') {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        data[i] = Math.min(255, r * 1.12 + 20);
+        data[i + 1] = Math.min(255, g * 0.98 + 10);
+        data[i + 2] = Math.min(255, b * 1.05 + 15);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+  } else if (filterName === 'Nude Minimal') {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        r = (r * 0.85) + 30;
+        g = (g * 0.85) + 25;
+        b = (b * 0.80) + 20;
+
+        data[i] = Math.min(255, r);
+        data[i + 1] = Math.min(255, g);
+        data[i + 2] = Math.min(255, b);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+  ctx.restore();
 }
 
 function renderCircularText(

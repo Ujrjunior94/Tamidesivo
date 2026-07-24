@@ -90,3 +90,60 @@
   background: #5B1E2D;
 }
 
+/* Sticker Studio Animated Preview & Export Animations */
+@keyframes scaleUpEntry {
+  0% { transform: scale(0.2); opacity: 0; }
+  65% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeInEntry {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatPulse {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-10px) scale(1.04); }
+}
+
+@keyframes shimmerGlow {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(212,175,55,0.4)); }
+  50% { filter: drop-shadow(0 0 24px rgba(212,175,55,0.95)) brightness(1.15); }
+}
+
+@keyframes rotateSpring {
+  0% { transform: scale(0.3) rotate(-28deg); opacity: 0; }
+  70% { transform: scale(1.06) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes slideUpEntry {
+  0% { transform: translateY(70px) scale(0.9); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.animate-sticker-scale-up {
+  animation: scaleUpEntry 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-sticker-fade-in {
+  animation: fadeInEntry 0.6s ease-out forwards;
+}
+
+.animate-sticker-float-pulse {
+  animation: floatPulse 3s ease-in-out infinite;
+}
+
+.animate-sticker-shimmer-glow {
+  animation: shimmerGlow 2.5s ease-in-out infinite;
+}
+
+.animate-sticker-rotate-spring {
+  animation: rotateSpring 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-sticker-slide-up {
+  animation: slideUpEntry 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

@@ -29,14 +29,37 @@ import {
   Orbit,
   CircleDot,
   Waves,
-  Moon
+  Moon,
+  Video,
+  Play,
+  Film
 } from 'lucide-react';
+
+export const ANIMATION_PRESETS = [
+  { id: 'scale-up', name: 'Scale Up Elastic', className: 'animate-sticker-scale-up', desc: 'Entrada com zoom elástico marcante.', icon: '⚡' },
+  { id: 'rotate-spring', name: 'Giratório Mola', className: 'animate-sticker-rotate-spring', desc: 'Giro gracioso com efeito mola.', icon: '🌀' },
+  { id: 'float-pulse', name: 'Flutuante Pulse', className: 'animate-sticker-float-pulse', desc: 'Flutuação contínua e aveludada em loop.', icon: '🎈' },
+  { id: 'shimmer-glow', name: 'Brilho Champagne', className: 'animate-sticker-shimmer-glow', desc: 'Pulse de luz reluzente no contorno.', icon: '✨' },
+  { id: 'slide-up', name: 'Slide Up Soft', className: 'animate-sticker-slide-up', desc: 'Elevação vertical suave.', icon: '⬆️' },
+  { id: 'fade-in', name: 'Fade In Delicado', className: 'animate-sticker-fade-in', desc: 'Surgimento gradual e elegante.', icon: '🌸' },
+];
+
 
 interface StickerStudioProps {
   sticker: StickerItem | null;
   onClose: () => void;
   onSaveCustomSticker?: (newSticker: StickerItem) => void;
 }
+
+const AESTHETIC_FILTERS = [
+  { id: 'Normal', name: 'Original / Normal', desc: 'Sem nenhum filtro de matriz de cor aplicado.', bgPreview: 'bg-stone-200 text-stone-700', icon: '✦' },
+  { id: 'Dourado Glow', name: 'Dourado Glow', desc: 'Aquecimento ouro champagne com realce de luminosidade.', bgPreview: 'bg-amber-100 text-amber-800 border border-amber-300', icon: '✨' },
+  { id: 'Vintage Matte', name: 'Vintage Matte', desc: 'Efeito fosco muted suave e tom sépia editorial.', bgPreview: 'bg-stone-300 text-stone-800 border border-stone-400', icon: '📷' },
+  { id: 'Crystal Contrast', name: 'Crystal Contrast', desc: 'Contraste prateado cristalino com matiz frio.', bgPreview: 'bg-sky-100 text-sky-800 border border-sky-300', icon: '💎' },
+  { id: 'Bordeaux Chic', name: 'Bordeaux Chic', desc: 'Matiz vinho nobre profundo e alta saturação.', bgPreview: 'bg-rose-100 text-rose-950 border border-rose-300', icon: '🍷' },
+  { id: 'Rose Gold Soft', name: 'Rose Gold Soft', desc: 'Tom rosé romântico com brilho aveludado.', bgPreview: 'bg-pink-100 text-pink-800 border border-pink-300', icon: '🌸' },
+  { id: 'Nude Minimal', name: 'Nude Minimal', desc: 'Estética minimalista com tons nude quentes.', bgPreview: 'bg-orange-100 text-amber-900 border border-amber-200', icon: '🐚' },
+];
 
 export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, onSaveCustomSticker }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -61,6 +84,7 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
     iconPosition: 'top',
     iconSize: 110,
     styleEffect: sticker?.style || 'Traços Finos',
+    aestheticFilter: 'Normal',
     rotation: 0,
     glassOpacity: 0.22,
     aspectRatio: '1:1',
@@ -69,7 +93,11 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
 
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'text' | 'style' | 'outline' | 'icon'>('text');
+  const [recordingVideo, setRecordingVideo] = useState(false);
+  const [animatedPreview, setAnimatedPreview] = useState(true);
+  const [animationPreset, setAnimationPreset] = useState<string>('scale-up');
+  const [animKey, setAnimKey] = useState(1);
+  const [activeTab, setActiveTab] = useState<'text' | 'style' | 'filters' | 'animation' | 'outline' | 'icon'>('text');
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -82,6 +110,59 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
 
     renderStickerToCanvas(ctx, 1200, 1200, state);
   }, [state]);
+
+  const handleExportWebM = () => {
+    if (!canvasRef.current) return;
+    setRecordingVideo(true);
+    setAnimKey((prev) => prev + 1);
+
+    try {
+      const canvas = canvasRef.current;
+      const stream = canvas.captureStream ? canvas.captureStream(30) : null;
+      if (!stream) {
+        alert('Seu navegador não suporta captura direta de vídeo do Canvas.');
+        setRecordingVideo(false);
+        return;
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : MediaRecorder.isTypeSupported('video/webm')
+        ? 'video/webm'
+        : 'video/mp4';
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `adesivo-animado-${state.text.toLowerCase().replace(/\s+/g, '-')}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setRecordingVideo(false);
+      };
+
+      mediaRecorder.start();
+
+      setTimeout(() => {
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      setRecordingVideo(false);
+    }
+  };
 
   const handleDownload = (res: '1080' | '2048' | '4096') => {
     setDownloading(true);
@@ -147,40 +228,84 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-[#D4AF37]" /> Estúdio Caligráfico HD
             </span>
-            <span className="text-[10px] text-[#6E6E6E]">Fundo Alpha Transparente</span>
+            <button
+              onClick={() => setAnimatedPreview(!animatedPreview)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all border ${
+                animatedPreview
+                  ? 'bg-[#5B1E2D] text-[#D4AF37] border-[#D4AF37]/40 shadow-xs'
+                  : 'bg-white/80 text-[#6E6E6E] border-stone-300'
+              }`}
+            >
+              <Film className="w-3 h-3 text-[#D4AF37]" />
+              <span>{animatedPreview ? 'Pré-visualização Animada ON' : 'Estático'}</span>
+            </button>
           </div>
 
           {/* Checkerboard Backdrop Stage */}
-          <div className="relative aspect-square w-full max-w-[360px] rounded-2xl bg-white border border-[#D4AF37]/30 flex items-center justify-center p-6 my-auto shadow-md overflow-hidden">
+          <div className="relative aspect-square w-full max-w-[360px] rounded-2xl bg-white border border-[#D4AF37]/30 flex flex-col items-center justify-center p-6 my-auto shadow-md overflow-hidden group">
             <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#5B1E2D 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
-            <canvas ref={canvasRef} className="w-full h-full object-contain filter drop-shadow-md relative z-10" />
+            
+            {/* Replay Overlay Control */}
+            {animatedPreview && (
+              <button
+                onClick={() => setAnimKey((prev) => prev + 1)}
+                title="Replay Animação"
+                className="absolute top-3 right-3 z-20 p-2 rounded-full bg-[#5B1E2D]/85 text-[#D4AF37] hover:bg-[#5B1E2D] backdrop-blur-md shadow-md border border-[#D4AF37]/40 transition-all hover:scale-105"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Animation Wrapper */}
+            <div
+              key={animKey}
+              className={`w-full h-full flex items-center justify-center ${
+                animatedPreview
+                  ? ANIMATION_PRESETS.find((p) => p.id === animationPreset)?.className || 'animate-sticker-scale-up'
+                  : ''
+              }`}
+            >
+              <canvas ref={canvasRef} className="w-full h-full object-contain filter drop-shadow-md relative z-10" />
+            </div>
           </div>
 
-          {/* Export Bar */}
+          {/* Export & Animation Action Bar */}
           <div className="w-full space-y-2 mt-4">
+            {/* WebM Video Export Button for Stories */}
+            <button
+              onClick={handleExportWebM}
+              disabled={recordingVideo}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#5B1E2D] via-[#8B2D44] to-[#5B1E2D] text-[#D4AF37] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all border border-[#D4AF37]/60 hover:opacity-95"
+            >
+              <Video className="w-4 h-4 text-[#D4AF37]" />
+              <span>
+                {recordingVideo ? 'Gravando Vídeo WebM (3s)...' : 'Exportar Vídeo WebM (Instagram Stories)'}
+              </span>
+            </button>
+
             <div className="flex gap-2">
               <button
                 onClick={handleCopy}
-                className={`flex-1 py-3 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all border ${
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all border ${
                   copied ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-white border-[#D4AF37]/30 text-[#2B2B2B] hover:bg-[#5B1E2D] hover:text-[#D4AF37]'
                 }`}
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4 text-[#D4AF37]" />}
-                <span>{copied ? 'Copiado!' : 'Copiar PNG Transparente'}</span>
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5 text-[#D4AF37]" />}
+                <span>{copied ? 'Copiado!' : 'Copiar PNG'}</span>
               </button>
 
               <button
                 onClick={() => handleDownload('2048')}
                 disabled={downloading}
-                className="flex-1 py-3 px-4 rounded-xl bg-[#5B1E2D] hover:bg-[#8B2D44] text-[#D4AF37] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all border border-[#D4AF37]/50"
+                className="flex-1 py-2.5 px-3 rounded-xl bg-white hover:bg-[#F8F6F3] text-[#5B1E2D] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all border border-[#D4AF37]/40"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span>Baixar 4K PNG</span>
               </button>
             </div>
 
             <div className="flex justify-between items-center text-[10px] text-[#6E6E6E] px-1 font-light">
-              <span>Qualidade do Export:</span>
+              <span>Resolução do PNG:</span>
               <div className="flex gap-2 font-bold text-[#5B1E2D]">
                 <button onClick={() => handleDownload('1080')} className="hover:underline">1080p</button>
                 <span>•</span>
@@ -209,14 +334,14 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
             </div>
 
             {/* Customizer Tabs */}
-            <div className="grid grid-cols-4 gap-1 bg-[#F8F6F3] p-1.5 rounded-xl my-4 border border-[#D4AF37]/25 text-xs font-semibold">
+            <div className="grid grid-cols-6 gap-1 bg-[#F8F6F3] p-1.5 rounded-xl my-4 border border-[#D4AF37]/25 text-[11px] font-semibold">
               <button
                 onClick={() => setActiveTab('text')}
                 className={`py-2 rounded-lg flex items-center justify-center gap-1 transition-all ${
                   activeTab === 'text' ? 'bg-[#5B1E2D] text-[#D4AF37] font-bold shadow-sm' : 'text-[#2B2B2B] hover:text-[#5B1E2D]'
                 }`}
               >
-                <Type className="w-3.5 h-3.5" /> Texto
+                <Type className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Texto</span>
               </button>
               <button
                 onClick={() => setActiveTab('style')}
@@ -224,7 +349,23 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
                   activeTab === 'style' ? 'bg-[#5B1E2D] text-[#D4AF37] font-bold shadow-sm' : 'text-[#2B2B2B] hover:text-[#5B1E2D]'
                 }`}
               >
-                <Palette className="w-3.5 h-3.5" /> Estilo
+                <Palette className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Estilo</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('filters')}
+                className={`py-2 rounded-lg flex items-center justify-center gap-1 transition-all ${
+                  activeTab === 'filters' ? 'bg-[#5B1E2D] text-[#D4AF37] font-bold shadow-sm' : 'text-[#2B2B2B] hover:text-[#5B1E2D]'
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Filtros</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('animation')}
+                className={`py-2 rounded-lg flex items-center justify-center gap-1 transition-all ${
+                  activeTab === 'animation' ? 'bg-[#5B1E2D] text-[#D4AF37] font-bold shadow-sm' : 'text-[#2B2B2B] hover:text-[#5B1E2D]'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Animação</span>
               </button>
               <button
                 onClick={() => setActiveTab('outline')}
@@ -232,7 +373,7 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
                   activeTab === 'outline' ? 'bg-[#5B1E2D] text-[#D4AF37] font-bold shadow-sm' : 'text-[#2B2B2B] hover:text-[#5B1E2D]'
                 }`}
               >
-                <Sliders className="w-3.5 h-3.5" /> Borda
+                <Sliders className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Borda</span>
               </button>
               <button
                 onClick={() => setActiveTab('icon')}
@@ -240,9 +381,10 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
                   activeTab === 'icon' ? 'bg-[#5B1E2D] text-[#D4AF37] font-bold shadow-sm' : 'text-[#2B2B2B] hover:text-[#5B1E2D]'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" /> Ícone
+                <Sparkles className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Ícone</span>
               </button>
             </div>
+
 
             {/* Tab 1: Text & Fonts */}
             {activeTab === 'text' && (
@@ -425,7 +567,153 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
               </div>
             )}
 
-            {/* Tab 3: Outline & Glow */}
+            {/* Tab 3: Estética Avançada Filters */}
+            {activeTab === 'filters' && (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-[#2B2B2B]">
+                      Filtros Estética Avançada (Correção de Cor)
+                    </label>
+                    <span className="text-[9px] font-bold bg-[#D4AF37] text-[#5B1E2D] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Canvas 4K
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#6E6E6E] font-light mb-3">
+                    Aplique ajustes de tonalidade, temperatura e luminosidade em tempo real diretamente na renderização do canvas.
+                  </p>
+
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1">
+                    {AESTHETIC_FILTERS.map((f) => {
+                      const isSelected = (state.aestheticFilter || 'Normal') === f.id;
+                      return (
+                        <button
+                          key={f.id}
+                          onClick={() => setState({ ...state, aestheticFilter: f.id as any })}
+                          className={`p-3 rounded-2xl text-left border transition-all flex items-center gap-3 shadow-sm ${
+                            isSelected
+                              ? 'bg-[#5B1E2D] text-[#F8F6F3] border-[#D4AF37] shadow-md ring-2 ring-[#D4AF37]/40'
+                              : 'bg-[#F8F6F3] hover:bg-[#EFE8DF] border-[#D4AF37]/20 text-[#2B2B2B]'
+                          }`}
+                        >
+                          <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-sm font-bold shadow-inner ${f.bgPreview}`}>
+                            {f.icon}
+                          </div>
+
+                          <div className="flex-1 space-y-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-serif-title font-bold ${isSelected ? 'text-[#D4AF37]' : 'text-[#2B2B2B]'}`}>
+                                {f.name}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[10px] font-bold text-[#D4AF37] flex items-center gap-1">
+                                  <Check className="w-3 h-3" /> Aplicado
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-[10px] font-light leading-normal ${isSelected ? 'text-[#EFE8DF]' : 'text-[#6E6E6E]'}`}>
+                              {f.desc}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 4: Animação & Exportação de Vídeo WebM */}
+            {activeTab === 'animation' && (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-[#2B2B2B]">
+                      Efeitos de Animação (Entrada & Loop)
+                    </label>
+                    <span className="text-[9px] font-bold bg-[#D4AF37] text-[#5B1E2D] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Instagram Stories
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#6E6E6E] font-light mb-3">
+                    Escolha um efeito de entrada ou movimento contínuo para transformar seu adesivo estático em um vídeo animado pronto para Reels e Stories.
+                  </p>
+
+                  <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
+                    {ANIMATION_PRESETS.map((preset) => {
+                      const isSelected = animationPreset === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          onClick={() => {
+                            setAnimationPreset(preset.id);
+                            setAnimatedPreview(true);
+                            setAnimKey((prev) => prev + 1);
+                          }}
+                          className={`p-3 rounded-2xl text-left border transition-all flex items-center gap-3 shadow-sm ${
+                            isSelected
+                              ? 'bg-[#5B1E2D] text-[#F8F6F3] border-[#D4AF37] shadow-md ring-2 ring-[#D4AF37]/40'
+                              : 'bg-[#F8F6F3] hover:bg-[#EFE8DF] border-[#D4AF37]/20 text-[#2B2B2B]'
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-amber-100 text-[#5B1E2D] shrink-0 flex items-center justify-center text-base font-bold shadow-inner border border-amber-300">
+                            {preset.icon}
+                          </div>
+
+                          <div className="flex-1 space-y-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-serif-title font-bold ${isSelected ? 'text-[#D4AF37]' : 'text-[#2B2B2B]'}`}>
+                                {preset.name}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[10px] font-bold text-[#D4AF37] flex items-center gap-1">
+                                  <Check className="w-3 h-3" /> Ativo
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-[10px] font-light leading-normal ${isSelected ? 'text-[#EFE8DF]' : 'text-[#6E6E6E]'}`}>
+                              {preset.desc}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[#D4AF37]/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setAnimKey((prev) => prev + 1)}
+                      className="py-2 px-3 rounded-xl bg-[#F8F6F3] hover:bg-[#EFE8DF] text-[#5B1E2D] border border-[#D4AF37]/30 text-xs font-bold flex items-center gap-1.5 transition-all"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-[#D4AF37]" /> Testar Animação Novamente
+                    </button>
+
+                    <button
+                      onClick={() => setAnimatedPreview(!animatedPreview)}
+                      className="text-xs font-semibold text-[#6E6E6E] hover:text-[#5B1E2D] underline"
+                    >
+                      {animatedPreview ? 'Desativar Animação' : 'Ativar Animação'}
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleExportWebM}
+                    disabled={recordingVideo}
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#5B1E2D] via-[#8B2D44] to-[#5B1E2D] text-[#D4AF37] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-lg border border-[#D4AF37]/60 transition-all hover:scale-[1.01]"
+                  >
+                    <Video className="w-4 h-4 text-[#D4AF37]" />
+                    <span>
+                      {recordingVideo ? 'Gravando Vídeo (3s)...' : 'Gravar & Exportar Vídeo WebM (3s Loop)'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+
+            {/* Tab 4: Outline & Glow */}
             {activeTab === 'outline' && (
               <div className="space-y-4">
                 <div>

@@ -15,8 +15,90 @@ import {
   X,
   Move,
   MousePointer,
-  Crown
+  Crown,
+  Palette,
+  Pipette,
+  Check,
+  Sliders
 } from 'lucide-react';
+
+interface PaletteSwatch {
+  hex: string;
+  label: string;
+  isDark: boolean;
+  lum?: number;
+}
+
+interface PaletteSuggestion {
+  textColor: string;
+  outlineColor: string;
+  accentColor: string;
+  bgColor: string;
+  swatches: PaletteSwatch[];
+}
+
+const PRESET_PALETTES: { [id: string]: PaletteSuggestion } = {
+  'ts-luxury': {
+    textColor: '#D4AF37',
+    outlineColor: '#F5E6E8',
+    accentColor: '#F3E5AB',
+    bgColor: '#5B1E2D',
+    swatches: [
+      { hex: '#5B1E2D', label: 'Vinho Tamiris', isDark: true },
+      { hex: '#D4AF37', label: 'Ouro Champagne', isDark: false },
+      { hex: '#F5E6E8', label: 'Rosé Soft', isDark: false },
+      { hex: '#3D141E', label: 'Bordeaux Escuro', isDark: true },
+    ],
+  },
+  'ts-nude': {
+    textColor: '#5B1E2D',
+    outlineColor: '#D4AF37',
+    accentColor: '#8B5E3C',
+    bgColor: '#F8F6F3',
+    swatches: [
+      { hex: '#F8F6F3', label: 'Nude Soft', isDark: false },
+      { hex: '#5B1E2D', label: 'Vinho Chique', isDark: true },
+      { hex: '#D4AF37', label: 'Ouro Nobre', isDark: false },
+      { hex: '#EFE8DF', label: 'Areia Clínica', isDark: false },
+    ],
+  },
+  'gold-chic': {
+    textColor: '#D4AF37',
+    outlineColor: '#FFFFFF',
+    accentColor: '#8B2D44',
+    bgColor: '#2B2B2B',
+    swatches: [
+      { hex: '#2B2B2B', label: 'Charcoal Ouro', isDark: true },
+      { hex: '#D4AF37', label: 'Ouro Reluzente', isDark: false },
+      { hex: '#8B2D44', label: 'Vinho Vibrante', isDark: true },
+      { hex: '#F8F6F3', label: 'Branco Marfim', isDark: false },
+    ],
+  },
+  'clinic-rose': {
+    textColor: '#4A1824',
+    outlineColor: '#D4AF37',
+    accentColor: '#D5C3C6',
+    bgColor: '#FAF3F0',
+    swatches: [
+      { hex: '#FAF3F0', label: 'Rosé Clínica', isDark: false },
+      { hex: '#4A1824', label: 'Vinho Profundo', isDark: true },
+      { hex: '#D4AF37', label: 'Ouro Champagne', isDark: false },
+      { hex: '#D5C3C6', label: 'Nude Rosé', isDark: false },
+    ],
+  },
+  'dark-marble': {
+    textColor: '#D4AF37',
+    outlineColor: '#FFFFFF',
+    accentColor: '#E0E0E0',
+    bgColor: '#1C1C1C',
+    swatches: [
+      { hex: '#1C1C1C', label: 'Preto Mármore', isDark: true },
+      { hex: '#D4AF37', label: 'Ouro Real', isDark: false },
+      { hex: '#FFFFFF', label: 'Branco Neve', isDark: false },
+      { hex: '#4A4A4A', label: 'Cinza Estúdio', isDark: true },
+    ],
+  },
+};
 
 interface StoriesSimulatorProps {
   initialSticker?: StickerItem | null;
@@ -27,8 +109,98 @@ export const StoriesSimulator: React.FC<StoriesSimulatorProps> = ({ initialStick
   const [backgroundPreset, setBackgroundPreset] = useState<string>('ts-luxury');
   const [customBgImage, setCustomBgImage] = useState<string | null>(null);
   const [simulatorCategory, setSimulatorCategory] = useState<string>('all');
+  const [extractedPalette, setExtractedPalette] = useState<PaletteSuggestion>(PRESET_PALETTES['ts-luxury']);
+  const [appliedMsg, setAppliedMsg] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Extract color palette from background photo or preset
+  useEffect(() => {
+    if (customBgImage) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const cvs = document.createElement('canvas');
+        const ctx = cvs.getContext('2d');
+        if (!ctx) return;
+        cvs.width = 40;
+        cvs.height = 40;
+        ctx.drawImage(img, 0, 0, 40, 40);
+        const data = ctx.getImageData(0, 0, 40, 40).data;
+
+        const bins: { [hex: string]: { r: number; g: number; b: number; count: number } } = {};
+        for (let i = 0; i < data.length; i += 16) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3];
+          if (a < 100) continue;
+
+          const qr = Math.round(r / 32) * 32;
+          const qg = Math.round(g / 32) * 32;
+          const qb = Math.round(b / 32) * 32;
+          const hex = `#${((1 << 24) + (qr << 16) + (qg << 8) + qb).toString(16).slice(1)}`;
+
+          if (!bins[hex]) {
+            bins[hex] = { r: qr, g: qg, b: qb, count: 0 };
+          }
+          bins[hex].count++;
+        }
+
+        const sorted = Object.values(bins).sort((a, b) => b.count - a.count);
+        const top = sorted.slice(0, 4);
+
+        const swatches: PaletteSwatch[] = top.map((c, idx) => {
+          const hex = `#${((1 << 24) + (c.r << 16) + (c.g << 8) + c.b).toString(16).slice(1)}`;
+          const lum = (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255;
+          const labels = ['Fundo Principal', 'Tom Primário', 'Contraste Foto', 'Acento Imagem'];
+          return {
+            hex,
+            label: labels[idx] || `Tom ${idx + 1}`,
+            isDark: lum < 0.5,
+            lum,
+          };
+        });
+
+        const bgLum = swatches[0]?.lum ?? 0.5;
+        let textC = bgLum > 0.55 ? '#5B1E2D' : '#D4AF37';
+        let outlineC = bgLum > 0.55 ? '#D4AF37' : '#FFFFFF';
+        let accentC = swatches[1]?.hex || (bgLum > 0.55 ? '#4A1824' : '#F3E5AB');
+
+        setExtractedPalette({
+          textColor: textC,
+          outlineColor: outlineC,
+          accentColor: accentC,
+          bgColor: swatches[0]?.hex || '#5B1E2D',
+          swatches,
+        });
+      };
+      img.src = customBgImage;
+    } else {
+      setExtractedPalette(PRESET_PALETTES[backgroundPreset] || PRESET_PALETTES['ts-luxury']);
+    }
+  }, [customBgImage, backgroundPreset]);
+
+  const handleApplyPaletteToSticker = (textC: string, primaryC: string) => {
+    if (!selectedElementId) return;
+    setPlacedStickers((prev) =>
+      prev.map((item) => {
+        if (item.id === selectedElementId) {
+          return {
+            ...item,
+            sticker: {
+              ...item.sticker,
+              textColor: textC,
+              primaryColor: primaryC,
+            },
+          };
+        }
+        return item;
+      })
+    );
+    setAppliedMsg('Paleta harmonizada aplicada!');
+    setTimeout(() => setAppliedMsg(null), 2500);
+  };
 
   // Story Elements State
   const [placedStickers, setPlacedStickers] = useState<StoryMockupElement[]>(() => {
@@ -313,6 +485,98 @@ export const StoriesSimulator: React.FC<StoriesSimulatorProps> = ({ initialStick
             </div>
           </div>
 
+          {/* Color Palette Extractor & Suggestions Card */}
+          <div className="bg-white border border-[#D4AF37]/30 rounded-[32px] p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-2">
+              <h3 className="text-sm font-serif-title font-bold text-[#5B1E2D] flex items-center gap-2">
+                <Pipette className="w-4 h-4 text-[#D4AF37]" />
+                Paleta Extraída do Story
+              </h3>
+              <span className="text-[10px] font-bold bg-[#D4AF37]/20 text-[#5B1E2D] px-2 py-0.5 rounded-full uppercase">
+                {customBgImage ? 'Foto Carregada' : 'Preset Ativo'}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-[#6E6E6E] font-light leading-snug">
+              Cores extraídas da imagem de fundo. Use as sugestões de alto contraste para garantir legibilidade perfeita no seu story.
+            </p>
+
+            {/* Extracted Swatches Grid */}
+            <div className="grid grid-cols-2 gap-2">
+              {extractedPalette.swatches.map((swatch, idx) => (
+                <div
+                  key={idx}
+                  className="p-2 rounded-xl bg-[#F8F6F3] border border-[#D4AF37]/20 flex items-center gap-2 shadow-xs"
+                >
+                  <div
+                    className="w-7 h-7 rounded-lg shrink-0 border border-black/10 shadow-inner"
+                    style={{ backgroundColor: swatch.hex }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-bold text-[#2B2B2B] block truncate">
+                      {swatch.label}
+                    </span>
+                    <span className="text-[9px] font-mono text-[#6E6E6E] uppercase">
+                      {swatch.hex}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Harmonized Suggestions */}
+            <div className="p-3 bg-[#5B1E2D]/5 rounded-2xl border border-[#D4AF37]/25 space-y-2">
+              <span className="text-[11px] font-bold text-[#5B1E2D] block flex items-center justify-between">
+                <span>Sugestão de Harmonia:</span>
+                {appliedMsg && (
+                  <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-600" /> {appliedMsg}
+                  </span>
+                )}
+              </span>
+
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[#6E6E6E]">Texto:</span>
+                  <div
+                    className="w-4 h-4 rounded-full border border-black/20"
+                    style={{ backgroundColor: extractedPalette.textColor }}
+                  />
+                  <span className="font-mono text-[10px] font-bold text-[#2B2B2B]">
+                    {extractedPalette.textColor}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[#6E6E6E]">Fundo Adesivo:</span>
+                  <div
+                    className="w-4 h-4 rounded-full border border-black/20"
+                    style={{ backgroundColor: extractedPalette.bgColor }}
+                  />
+                  <span className="font-mono text-[10px] font-bold text-[#2B2B2B]">
+                    {extractedPalette.bgColor}
+                  </span>
+                </div>
+              </div>
+
+              {selectedElement ? (
+                <button
+                  onClick={() =>
+                    handleApplyPaletteToSticker(extractedPalette.textColor, extractedPalette.bgColor)
+                  }
+                  className="w-full py-2 px-3 mt-1 rounded-xl bg-[#5B1E2D] text-[#D4AF37] hover:bg-[#3D141E] text-xs font-serif font-bold flex items-center justify-center gap-2 shadow-sm transition-all border border-[#D4AF37]/40"
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  <span>Aplicar Paleta no Adesivo Selecionado</span>
+                </button>
+              ) : (
+                <p className="text-[10px] text-[#6E6E6E] italic text-center pt-1">
+                  Selecione um adesivo na tela para aplicar a paleta extraída.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Add Stickers Palette */}
           <div className="bg-white border border-[#D4AF37]/30 rounded-[32px] p-6 space-y-4 shadow-xl">
             <h3 className="text-sm font-serif-title font-bold text-[#5B1E2D] flex items-center justify-between border-b border-[#D4AF37]/20 pb-2">
@@ -588,18 +852,37 @@ export const StoriesSimulator: React.FC<StoriesSimulatorProps> = ({ initialStick
                             )}
                           </div>
                         ) : element.sticker.category === 'desenhos-formas' || element.sticker.style === 'Sem Borda' ? (
-                          <div className="px-3 py-1 text-center text-[#D4AF37] filter drop-shadow-[0_4px_12px_rgba(212,175,55,0.7)] flex items-center justify-center gap-2 select-none pointer-events-none">
+                          <div
+                            className="px-3 py-1 text-center filter drop-shadow-[0_4px_12px_rgba(212,175,55,0.7)] flex items-center justify-center gap-2 select-none pointer-events-none"
+                            style={{ color: element.sticker.textColor || '#D4AF37' }}
+                          >
                             {element.sticker.iconSymbol && (
-                              <IconSymbol name={element.sticker.iconSymbol} className="w-6 h-6 text-[#D4AF37] shrink-0" />
+                              <IconSymbol
+                                name={element.sticker.iconSymbol}
+                                className="w-6 h-6 shrink-0"
+                                style={{ color: element.sticker.textColor || '#D4AF37' }}
+                              />
                             )}
                             <span className="font-serif-title font-bold text-base sm:text-lg tracking-wide whitespace-nowrap">
                               {element.sticker.title}
                             </span>
                           </div>
                         ) : (
-                          <div className="px-4 py-2 rounded-2xl bg-[#5B1E2D]/85 backdrop-blur-md border border-[#D4AF37]/40 text-center text-[#F8F6F3] filter drop-shadow-2xl flex items-center justify-center gap-2 select-none pointer-events-none">
+                          <div
+                            className="px-4 py-2 rounded-2xl backdrop-blur-md text-center filter drop-shadow-2xl flex items-center justify-center gap-2 select-none pointer-events-none transition-all"
+                            style={{
+                              backgroundColor: `${element.sticker.primaryColor || '#5B1E2D'}DD`,
+                              borderColor: `${element.sticker.textColor || '#D4AF37'}B0`,
+                              color: element.sticker.textColor || '#F8F6F3',
+                              borderWidth: '1px',
+                            }}
+                          >
                             {element.sticker.iconSymbol && (
-                              <IconSymbol name={element.sticker.iconSymbol} className="w-5 h-5 text-[#D4AF37] shrink-0" />
+                              <IconSymbol
+                                name={element.sticker.iconSymbol}
+                                className="w-5 h-5 shrink-0"
+                                style={{ color: element.sticker.textColor || '#D4AF37' }}
+                              />
                             )}
                             <span className="font-serif-title font-bold text-sm sm:text-base tracking-wide whitespace-nowrap">
                               {element.sticker.title}
