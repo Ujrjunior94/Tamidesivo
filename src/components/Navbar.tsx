@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Sparkles, Download, Smartphone, Layers, Search, Bell, Heart, User, Image as ImageIcon, Sparkle, Moon, Share2, Check, Copy, ExternalLink, X, Globe, MessageCircle, Crown } from 'lucide-react';
+import { Sparkles, Download, Smartphone, Layers, Search, Bell, Heart, User, Image as ImageIcon, Sparkle, Moon, Share2, Check, Copy, ExternalLink, X, Globe, MessageCircle, Crown, Box } from 'lucide-react';
 import { getPublicShareUrl } from '../utils/shareUtils';
 
 interface NavbarProps {
-  activeTab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo';
-  setActiveTab: (tab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo') => void;
+  activeTab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo' | 'simulador-3d';
+  setActiveTab: (tab: 'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo' | 'simulador-3d') => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   totalStickersCount: number;
@@ -294,6 +294,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Crown className="w-3.5 h-3.5" />
               <span>Destaques & Logo</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('simulador-3d')}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all border ${
+                activeTab === 'simulador-3d'
+                  ? 'bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-[#5B1E2D] border-[#D4AF37] shadow-md'
+                  : 'bg-[#4A1824]/50 text-[#D4AF37] border-[#D4AF37]/30 hover:bg-[#4A1824]'
+              }`}
+            >
+              <Box className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>Simulador 3D (Three.js)</span>
             </button>
 
             <button

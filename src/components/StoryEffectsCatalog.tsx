@@ -17,7 +17,23 @@ export interface ShadowPreset {
   defaultOpacity: number;
   defaultBlur: number;
   defaultOffsetY: number;
-  type: 'gradient-bottom' | 'gradient-top' | 'oval-drop' | 'spotlight' | 'diffuse-360' | 'card-3d' | 'gold-glow' | 'side-directional';
+  type:
+    | 'gradient-bottom'
+    | 'gradient-top'
+    | 'oval-drop'
+    | 'spotlight'
+    | 'diffuse-360'
+    | 'card-3d'
+    | 'gold-glow'
+    | 'side-directional'
+    | 'neon-rosegold'
+    | 'glassmorphism-blur'
+    | 'double-shadow'
+    | 'polaroid-frame'
+    | 'washi-tape'
+    | 'dual-gradient-topbottom'
+    | 'mirror-reflection'
+    | 'sunbeam-window';
 }
 
 const SHADOW_PRESETS: ShadowPreset[] = [
@@ -31,6 +47,28 @@ const SHADOW_PRESETS: ShadowPreset[] = [
     defaultBlur: 20,
     defaultOffsetY: 40,
     type: 'gradient-bottom',
+  },
+  {
+    id: 'neon-rosegold',
+    name: 'Aura Neon Rose Gold (Glow Chic)',
+    badge: 'Novo Efeito',
+    description: 'Brilho neon rosado de alta intensidade projetado em 360° para engajamento rápido em Stories.',
+    category: 'Neon & Brilho',
+    defaultOpacity: 0.90,
+    defaultBlur: 35,
+    defaultOffsetY: 0,
+    type: 'neon-rosegold',
+  },
+  {
+    id: 'glassmorphism-blur',
+    name: 'Placa de Vidro Fosco (Glassmorphism)',
+    badge: 'Tendência 2026',
+    description: 'Fundo jateado transparente com iluminação nas bordas e sombra de elevação profunda.',
+    category: 'Efeitos Luxo',
+    defaultOpacity: 0.60,
+    defaultBlur: 28,
+    defaultOffsetY: 12,
+    type: 'glassmorphism-blur',
   },
   {
     id: 'vinheta-superior',
@@ -53,6 +91,72 @@ const SHADOW_PRESETS: ShadowPreset[] = [
     defaultBlur: 25,
     defaultOffsetY: 35,
     type: 'oval-drop',
+  },
+  {
+    id: 'double-shadow',
+    name: 'Sombra Dupla Editorial (Dual Layer)',
+    badge: 'Revista Moda',
+    description: 'Camada dupla de sombra deslocada (ouro + preto), dando visual gráfico moderno.',
+    category: 'Editorial Moda',
+    defaultOpacity: 0.70,
+    defaultBlur: 18,
+    defaultOffsetY: 15,
+    type: 'double-shadow',
+  },
+  {
+    id: 'polaroid-frame',
+    name: 'Moldura Polaroid Vintage + Sombra',
+    badge: 'Nostalgia Chic',
+    description: 'Moldura fotográfica clássica com reflexo suave e sombra de papel levitado.',
+    category: 'Molduras & Fotos',
+    defaultOpacity: 0.50,
+    defaultBlur: 22,
+    defaultOffsetY: 20,
+    type: 'polaroid-frame',
+  },
+  {
+    id: 'washi-tape',
+    name: 'Fita Adesiva Transparente (Washi Tape)',
+    badge: 'Handmade Luxo',
+    description: 'Efeito de fita adesiva semi-transparente fixando a figurinha no story.',
+    category: 'Efeitos Artesanais',
+    defaultOpacity: 0.55,
+    defaultBlur: 14,
+    defaultOffsetY: -35,
+    type: 'washi-tape',
+  },
+  {
+    id: 'dual-gradient-topbottom',
+    name: 'Proteção Dupla 360° (Topo + Rodapé)',
+    badge: 'Contraste Total',
+    description: 'Gradientes escuros simultâneos no topo e no rodapé para máxima nitidez.',
+    category: 'Stories Legendas',
+    defaultOpacity: 0.80,
+    defaultBlur: 20,
+    defaultOffsetY: 0,
+    type: 'dual-gradient-topbottom',
+  },
+  {
+    id: 'mirror-reflection',
+    name: 'Reflexo Espelhado Mágico',
+    badge: 'Reflexo 3D',
+    description: 'Projeção espelhada invertida na base com atenuação de opacidade estilo vitrine.',
+    category: 'Elevação 3D',
+    defaultOpacity: 0.45,
+    defaultBlur: 10,
+    defaultOffsetY: 30,
+    type: 'mirror-reflection',
+  },
+  {
+    id: 'sunbeam-window',
+    name: 'Fresta de Luz de Janela (Persiana)',
+    badge: 'Atmosférico',
+    description: 'Projeção cinematográfica de frestas de luz e sombra atravessando a cena.',
+    category: 'Cinematográfico',
+    defaultOpacity: 0.65,
+    defaultBlur: 16,
+    defaultOffsetY: 0,
+    type: 'sunbeam-window',
   },
   {
     id: 'spotlight-central',
@@ -185,6 +289,92 @@ export const StoryEffectsCatalog: React.FC<StoryEffectsCatalogProps> = ({
       grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
+    } else if (selectedPreset.type === 'dual-gradient-topbottom') {
+      const gradTop = ctx.createLinearGradient(0, 0, 0, height * 0.45);
+      gradTop.addColorStop(0, `rgba(0, 0, 0, ${alpha})`);
+      gradTop.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = gradTop;
+      ctx.fillRect(0, 0, width, height * 0.45);
+
+      const gradBot = ctx.createLinearGradient(0, height * 0.55, 0, height);
+      gradBot.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      gradBot.addColorStop(1, `rgba(0, 0, 0, ${alpha})`);
+      ctx.fillStyle = gradBot;
+      ctx.fillRect(0, height * 0.55, width, height * 0.45);
+    } else if (selectedPreset.type === 'neon-rosegold') {
+      const grad = ctx.createRadialGradient(cx, cy, 30, cx, cy, width * 0.48);
+      grad.addColorStop(0, `rgba(232, 140, 160, ${alpha})`);
+      grad.addColorStop(0.5, `rgba(183, 110, 121, ${alpha * 0.5})`);
+      grad.addColorStop(1, 'rgba(183, 110, 121, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, width * 0.48, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (selectedPreset.type === 'glassmorphism-blur') {
+      ctx.shadowColor = `rgba(0, 0, 0, ${alpha})`;
+      ctx.shadowBlur = shadowBlur * 2;
+      ctx.shadowOffsetY = shadowOffsetY * 2;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.strokeStyle = 'rgba(212, 175, 55, 0.8)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.roundRect(cx - 380, cy - 160, 760, 320, 40);
+      ctx.fill();
+      ctx.stroke();
+    } else if (selectedPreset.type === 'double-shadow') {
+      // Layer 1: Gold Shadow
+      ctx.shadowColor = `rgba(212, 175, 55, ${alpha * 0.8})`;
+      ctx.shadowBlur = shadowBlur;
+      ctx.shadowOffsetX = -15;
+      ctx.shadowOffsetY = 15;
+      ctx.fillStyle = 'rgba(91, 30, 45, 0.9)';
+      ctx.beginPath();
+      ctx.roundRect(cx - 360, cy - 120, 720, 240, 36);
+      ctx.fill();
+
+      // Layer 2: Deep Dark Shadow
+      ctx.shadowColor = `rgba(0, 0, 0, ${alpha})`;
+      ctx.shadowBlur = shadowBlur * 1.5;
+      ctx.shadowOffsetX = 20;
+      ctx.shadowOffsetY = 20;
+      ctx.fill();
+    } else if (selectedPreset.type === 'polaroid-frame') {
+      ctx.shadowColor = `rgba(0, 0, 0, ${alpha})`;
+      ctx.shadowBlur = shadowBlur * 2;
+      ctx.shadowOffsetY = shadowOffsetY * 2;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.roundRect(cx - 400, cy - 200, 800, 400, 20);
+      ctx.fill();
+    } else if (selectedPreset.type === 'washi-tape') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(245, 240, 235, 0.85)';
+      ctx.shadowColor = `rgba(0, 0, 0, ${alpha * 0.6})`;
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      ctx.beginPath();
+      ctx.roundRect(cx - 120, cy - 160, 240, 45, 6);
+      ctx.fill();
+      ctx.restore();
+    } else if (selectedPreset.type === 'sunbeam-window') {
+      ctx.save();
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.18})`;
+      ctx.beginPath();
+      ctx.moveTo(cx - 500, 0);
+      ctx.lineTo(cx - 200, 0);
+      ctx.lineTo(cx + 200, height);
+      ctx.lineTo(cx - 100, height);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx - 100, 0);
+      ctx.lineTo(cx + 200, 0);
+      ctx.lineTo(cx + 600, height);
+      ctx.lineTo(cx + 300, height);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     } else if (selectedPreset.type === 'oval-drop') {
       const dropY = cy + shadowOffsetY * 5;
       const grad = ctx.createRadialGradient(cx, dropY, 20, cx, dropY, width * 0.38);
@@ -450,6 +640,46 @@ export const StoryEffectsCatalog: React.FC<StoryEffectsCatalogProps> = ({
                 />
               )}
 
+              {selectedPreset.type === 'dual-gradient-topbottom' && (
+                <>
+                  <div
+                    className="absolute inset-x-0 top-0 pointer-events-none transition-all duration-200"
+                    style={{
+                      height: '40%',
+                      background: `linear-gradient(to bottom, rgba(0,0,0,${shadowOpacity}), transparent)`,
+                    }}
+                  />
+                  <div
+                    className="absolute inset-x-0 bottom-0 pointer-events-none transition-all duration-200"
+                    style={{
+                      height: '40%',
+                      background: `linear-gradient(to top, rgba(0,0,0,${shadowOpacity}), transparent)`,
+                    }}
+                  />
+                </>
+              )}
+
+              {selectedPreset.type === 'neon-rosegold' && (
+                <div
+                  className="absolute pointer-events-none rounded-full transition-all duration-200"
+                  style={{
+                    width: '85%',
+                    height: '85%',
+                    background: `radial-gradient(circle at center, rgba(232,140,160,${shadowOpacity}), rgba(183,110,121,${shadowOpacity * 0.4}) 60%, transparent 80%)`,
+                    filter: `blur(${shadowBlur * 0.8}px)`,
+                  }}
+                />
+              )}
+
+              {selectedPreset.type === 'sunbeam-window' && (
+                <div
+                  className="absolute inset-0 pointer-events-none transition-all duration-200 opacity-60 overflow-hidden"
+                  style={{
+                    background: `linear-gradient(135deg, transparent 20%, rgba(255,255,255,${shadowOpacity * 0.4}) 25%, transparent 30%, rgba(255,255,255,${shadowOpacity * 0.4}) 45%, transparent 50%)`,
+                  }}
+                />
+              )}
+
               {selectedPreset.type === 'spotlight' && (
                 <div
                   className="absolute inset-0 pointer-events-none transition-all duration-200"
@@ -484,6 +714,19 @@ export const StoryEffectsCatalog: React.FC<StoryEffectsCatalogProps> = ({
                 />
               )}
 
+              {selectedPreset.type === 'washi-tape' && (
+                <div
+                  className="absolute z-30 pointer-events-none bg-white/70 backdrop-blur-xs border border-white/40 shadow-sm rounded-xs"
+                  style={{
+                    width: '100px',
+                    height: '22px',
+                    top: '25%',
+                    transform: 'rotate(-6deg)',
+                    boxShadow: `0 4px 8px rgba(0,0,0,${shadowOpacity * 0.4})`,
+                  }}
+                />
+              )}
+
               {/* Active Sticker Visual Element */}
               <div
                 className="relative z-20 transition-all duration-200 max-w-full"
@@ -494,26 +737,58 @@ export const StoryEffectsCatalog: React.FC<StoryEffectsCatalogProps> = ({
                       ? `drop-shadow(0px 0px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
                       : selectedPreset.type === 'side-directional'
                       ? `drop-shadow(12px 16px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
+                      : selectedPreset.type === 'double-shadow'
+                      ? `drop-shadow(-8px 8px ${shadowBlur * 0.5}px rgba(212,175,55,${shadowOpacity})) drop-shadow(12px 12px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
+                      : selectedPreset.type === 'mirror-reflection'
+                      ? `drop-shadow(0px 10px ${shadowBlur * 0.8}px rgba(0,0,0,${shadowOpacity}))`
                       : 'none',
                 }}
               >
-                <div className={`px-6 py-4 rounded-3xl text-center shadow-xl border border-[#D4AF37]/50 ${
-                  selectedPreset.type === 'card-3d'
-                    ? 'bg-white/95 text-[#5B1E2D]'
-                    : 'bg-[#5B1E2D]/90 text-[#F8F6F3] backdrop-blur-md'
-                }`}>
+                <div
+                  className={`px-6 py-4 text-center shadow-xl border transition-all ${
+                    selectedPreset.type === 'card-3d'
+                      ? 'bg-white/95 text-[#5B1E2D] rounded-3xl border-[#D4AF37]/50'
+                      : selectedPreset.type === 'glassmorphism-blur'
+                      ? 'bg-white/20 text-[#F8F6F3] backdrop-blur-xl rounded-3xl border-white/40 shadow-2xl'
+                      : selectedPreset.type === 'polaroid-frame'
+                      ? 'bg-white text-[#2B2B2B] rounded-lg border-b-8 border-white p-6 shadow-2xl'
+                      : 'bg-[#5B1E2D]/90 text-[#F8F6F3] backdrop-blur-md rounded-3xl border-[#D4AF37]/50'
+                  }`}
+                >
                   <div className="flex items-center justify-center gap-2 mb-1">
                     {selectedSticker.iconSymbol && (
-                      <IconSymbol name={selectedSticker.iconSymbol} className="w-5 h-5 text-[#D4AF37]" />
+                      <IconSymbol
+                        name={selectedSticker.iconSymbol}
+                        className={`w-5 h-5 ${selectedPreset.type === 'polaroid-frame' ? 'text-[#5B1E2D]' : 'text-[#D4AF37]'}`}
+                      />
                     )}
-                    <span className="font-serif-title font-bold text-lg text-[#D4AF37]">
+                    <span
+                      className={`font-serif-title font-bold text-lg ${
+                        selectedPreset.type === 'polaroid-frame' ? 'text-[#5B1E2D]' : 'text-[#D4AF37]'
+                      }`}
+                    >
                       {selectedSticker.title}
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#EFE8DF] uppercase tracking-widest font-light block">
+                  <span
+                    className={`text-[10px] uppercase tracking-widest font-light block ${
+                      selectedPreset.type === 'polaroid-frame' ? 'text-[#6E6E6E]' : 'text-[#EFE8DF]'
+                    }`}
+                  >
                     {selectedSticker.style} • Tamiris Santana
                   </span>
                 </div>
+
+                {/* Mirror Reflection Effect */}
+                {selectedPreset.type === 'mirror-reflection' && (
+                  <div className="mt-1 opacity-30 transform scale-y-[-1] blur-[1px] pointer-events-none select-none mask-gradient-to-t">
+                    <div className="px-6 py-4 rounded-3xl text-center bg-[#5B1E2D]/90 text-[#F8F6F3]">
+                      <span className="font-serif-title font-bold text-lg text-[#D4AF37]">
+                        {selectedSticker.title}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>

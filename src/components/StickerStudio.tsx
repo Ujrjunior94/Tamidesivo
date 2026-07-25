@@ -100,7 +100,7 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
     gradientEnd: '#5B1E2D',
     hasGradient: true,
     strokeColor: '#FFFFFF',
-    strokeWidth: 18,
+    strokeWidth: 0,
     glowColor: '#D4AF37',
     glowRadius: sticker?.style === 'Neon' ? 30 : 0,
     shadowColor: 'rgba(91, 30, 45, 0.25)',
@@ -179,6 +179,44 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
       alert('Erro de rede ao conectar com o serviço de Paletas Gemini.');
     } finally {
       setIsGeneratingPalette(false);
+    }
+  };
+
+  // Auto-Configure Sticker with Gemini AI
+  const [isAIAutoCreating, setIsAIAutoCreating] = useState(false);
+  const handleAIAutoConfigure = async () => {
+    if (!state.text.trim()) return;
+    setIsAIAutoCreating(true);
+    try {
+      const response = await fetch('/api/ai/generate-custom-sticker-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phrase: state.text,
+          category: 'estetica-facial',
+          style: state.styleEffect,
+        }),
+      });
+      const res = await response.json();
+      if (res.success && res.stickerData) {
+        const d = res.stickerData;
+        setState((prev) => ({
+          ...prev,
+          textColor: d.textColor || '#FFFFFF',
+          gradientStart: d.primaryColor || '#D4AF37',
+          gradientEnd: d.primaryColor === '#D4AF37' ? '#5B1E2D' : '#D4AF37',
+          hasGradient: true,
+          fontFamily: d.fontFamily || prev.fontFamily,
+          iconSymbol: d.iconSymbol || prev.iconSymbol,
+          strokeWidth: 0,
+        }));
+        setShareNotice('Design configurado automaticamente pelo Gemini AI!');
+        setTimeout(() => setShareNotice(null), 3000);
+      }
+    } catch (err) {
+      console.error('Error in AI auto configure:', err);
+    } finally {
+      setIsAIAutoCreating(false);
     }
   };
 
@@ -567,6 +605,27 @@ export const StickerStudio: React.FC<StickerStudioProps> = ({ sticker, onClose, 
             {/* Tab 1: Text & Fonts */}
             {activeTab === 'text' && (
               <div className="space-y-4">
+                {/* AI Auto-Creator Banner */}
+                <div className="bg-[#5B1E2D]/5 border border-[#D4AF37]/40 rounded-2xl p-3 flex items-center justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-serif font-bold text-[#5B1E2D] block">✨ Auto-Design com Gemini IA</span>
+                    <span className="text-[10px] text-[#6E6E6E] font-light">Gere cores, fontes e estilo automático para sua frase</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAIAutoConfigure}
+                    disabled={isAIAutoCreating || !state.text.trim()}
+                    className="px-3 py-1.5 rounded-xl bg-[#5B1E2D] hover:bg-[#8B2D44] text-[#D4AF37] font-serif font-bold text-xs flex items-center gap-1 shadow-sm shrink-0 disabled:opacity-50 border border-[#D4AF37]/30"
+                  >
+                    {isAIAutoCreating ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#D4AF37]" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    )}
+                    <span>Configurar IA</span>
+                  </button>
+                </div>
+
                 <div>
                   <label className="text-xs font-semibold text-[#2B2B2B] block mb-1">Frase Principal</label>
                   <input

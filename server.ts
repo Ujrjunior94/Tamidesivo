@@ -183,7 +183,7 @@ app.post("/api/ai/generate-sticker", async (req, res) => {
         }
       }
     } catch (e1: any) {
-      console.warn("gemini-3.1-flash-lite-image failed, trying fallback:", e1.message);
+      console.warn("gemini-3.1-flash-lite-image notice:", e1.message);
       lastError = e1;
     }
 
@@ -211,77 +211,67 @@ app.post("/api/ai/generate-sticker", async (req, res) => {
           }
         }
       } catch (e2: any) {
-        console.warn("gemini-3.1-flash-image failed:", e2.message);
+        console.warn("gemini-3.1-flash-image notice:", e2.message);
         lastError = e2;
       }
     }
 
-    // 3. Try imagen-3.0-generate-002 if gemini image models failed
+    // 3. High-Quality Vector Sticker Fallback Generator
     if (!imageUrl) {
-      try {
-        const response = await ai.models.generateImages({
-          model: "imagen-3.0-generate-002",
-          prompt: fullPrompt,
-          config: {
-            numberOfImages: 1,
-            outputMimeType: "image/png",
-            aspectRatio: aspectRatio as any,
-          },
-        });
-
-        if (response.generatedImages?.[0]?.image?.imageBytes) {
-          imageUrl = `data:image/png;base64,${response.generatedImages[0].image.imageBytes}`;
-        }
-      } catch (e3: any) {
-        console.warn("imagen-3.0-generate-002 failed:", e3.message);
-        lastError = e3;
+      console.info("Gerando adesivo vetorial de altíssima qualidade para o prompt:", prompt);
+      
+      // Extract clean phrase from prompt
+      let cleanText = "";
+      const matchQuote = prompt.match(/["']([^"']+)["']/);
+      if (matchQuote && matchQuote[1]) {
+        cleanText = matchQuote[1].trim();
+      } else {
+        cleanText = prompt
+          .replace(/^a luxury hand-lettered graphic sticker of (the word\/phrase )?/gi, '')
+          .replace(/in exquisite.*$/gi, '')
+          .replace(/[\"'\n\r]/g, '')
+          .split(',')[0]
+          .trim();
       }
-    }
+      if (!cleanText || cleanText.length > 35) {
+        cleanText = cleanText.substring(0, 30) || "Harmonização & Luxo";
+      }
 
-    // 4. Fallback Vector Sticker Generator if all AI image models are unavailable or rate limited
-    if (!imageUrl) {
-      console.info("Using high-quality vector sticker fallback generator for prompt:", prompt);
-      const cleanText = prompt
-        .replace(/a luxury hand-lettered graphic sticker of the word\/phrase/gi, '')
-        .replace(/in exquisite.*calligraphy/gi, '')
-        .replace(/[\"'\n\r]/g, '')
-        .split(',')[0]
-        .trim() || "Adesivo Especial";
+      // Calculate dynamic font size based on text length
+      let fontSize = 72;
+      if (cleanText.length <= 8) fontSize = 84;
+      else if (cleanText.length <= 15) fontSize = 68;
+      else if (cleanText.length <= 25) fontSize = 52;
+      else fontSize = 40;
 
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
         <defs>
-          <linearGradient id="stickerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#38BDF8" />
-            <stop offset="50%" stop-color="#A855F7" />
-            <stop offset="100%" stop-color="#EC4899" />
+          <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FCEABB" />
+            <stop offset="50%" stop-color="#D4AF37" />
+            <stop offset="100%" stop-color="#8B6212" />
           </linearGradient>
           <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000" flood-opacity="0.35" />
+            <feDropShadow dx="0" dy="10" stdDeviation="20" flood-color="#5B1E2D" flood-opacity="0.3" />
           </filter>
         </defs>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&amp;display=swap');
-          .outer-diecut {
-            font-family: 'Dancing Script', 'Great Vibes', cursive, sans-serif;
-            font-size: 76px;
+          .lettering {
+            font-family: 'Dancing Script', 'Playfair Display', cursive, sans-serif;
+            font-size: ${fontSize}px;
             font-weight: 700;
-            fill: #ffffff;
-            stroke: #ffffff;
-            stroke-width: 28px;
-            stroke-linejoin: round;
-            stroke-linecap: round;
+            fill: url(#goldGrad);
           }
-          .inner-lettering {
-            font-family: 'Dancing Script', 'Great Vibes', cursive, sans-serif;
-            font-size: 76px;
-            font-weight: 700;
-            fill: url(#stickerGrad);
+          .sparkle {
+            fill: #D4AF37;
           }
         </style>
         <rect width="100%" height="100%" fill="none" />
-        <g transform="translate(400, 420)" text-anchor="middle" filter="url(#softGlow)">
-          <text x="0" y="0" class="outer-diecut">${cleanText}</text>
-          <text x="0" y="0" class="inner-lettering">${cleanText}</text>
+        <g transform="translate(500, 520)" text-anchor="middle" filter="url(#softGlow)">
+          <text x="0" y="0" class="lettering">${cleanText}</text>
+          <path class="sparkle" d="M -120 -100 L -115 -85 L -100 -80 L -115 -75 L -120 -60 L -125 -75 L -140 -80 L -125 -85 Z" opacity="0.85" />
+          <path class="sparkle" d="M 120 -110 L 123 -100 L 133 -97 L 123 -94 L 120 -84 L 117 -94 L 107 -97 L 117 -100 Z" opacity="0.85" />
         </g>
       </svg>`;
 
@@ -295,6 +285,48 @@ app.post("/api/ai/generate-sticker", async (req, res) => {
       error: "Erro ao gerar imagem de sticker com Gemini.",
       details: err.message,
     });
+  }
+});
+
+// AI Custom Sticker Parameter Generator
+app.post("/api/ai/generate-custom-sticker-data", async (req, res) => {
+  try {
+    const { phrase, category = "estetica-facial", style = "Traços Finos" } = req.body;
+    if (!phrase) {
+      return res.status(400).json({ error: "A frase é obrigatória." });
+    }
+
+    const ai = getGenAI();
+    const systemPrompt = `Você é um diretor de arte e designer tipográfico da marca de luxo Tamiris Santana.
+Dada a frase do usuário, crie uma configuração completa de adesivo de luxo.
+
+Responda rigorosamente em formato JSON:
+{
+  "title": "${phrase}",
+  "category": "${category}",
+  "style": "${style}",
+  "tags": ["estética", "harmonização", "luxo"],
+  "primaryColor": "#HEX (dourado #D4AF37, rose gold #B76E79, ou vinho #5B1E2D)",
+  "textColor": "#HEX (#FFFFFF ou #5B1E2D ou #D4AF37)",
+  "fontFamily": "Script Elegante" ou "Cursiva Delicada" ou "Luxo Serif" ou "Manuscrito Fino",
+  "iconSymbol": "Sparkles" ou "Crown" or "Heart" or "Star" or "Flower",
+  "badge": "IA TAMIRIS"
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: `Frase: "${phrase}"`,
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const data = JSON.parse(response.text || "{}");
+    res.json({ success: true, stickerData: data });
+  } catch (err: any) {
+    console.error("Erro no /api/ai/generate-custom-sticker-data:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 

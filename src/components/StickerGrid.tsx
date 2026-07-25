@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StickerItem, CategoryId, VisualStyle } from '../types';
 import { StickerCard } from './StickerCard';
 import { CATEGORIES } from '../data/stickersData';
@@ -17,6 +17,10 @@ import {
   X,
   Check,
   Download,
+  ArrowUpDown,
+  Clock,
+  Flame,
+  SortAsc,
 } from 'lucide-react';
 
 interface StickerGridProps {
@@ -29,6 +33,7 @@ interface StickerGridProps {
   onOpenPromptMaster: () => void;
   favoritesList?: string[];
   onToggleFavorite?: (id: string) => void;
+  onUpdateSticker?: (updatedSticker: StickerItem) => void;
 }
 
 export const StickerGrid: React.FC<StickerGridProps> = ({
@@ -41,14 +46,44 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
   onOpenPromptMaster,
   favoritesList = [],
   onToggleFavorite,
+  onUpdateSticker,
 }) => {
   const currentCategoryInfo = CATEGORIES.find((c) => c.id === selectedCategory);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'alphabetical'>('recent');
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportProgress, setExportProgress] = useState<string>('');
   const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  // Sorted stickers list
+  const sortedStickers = useMemo(() => {
+    const list = [...stickers];
+    if (sortBy === 'alphabetical') {
+      return list.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR', { sensitivity: 'base' }));
+    } else if (sortBy === 'popular') {
+      return list.sort((a, b) => {
+        const aFav = favoritesList.includes(a.id) ? 1 : 0;
+        const bFav = favoritesList.includes(b.id) ? 1 : 0;
+        if (aFav !== bFav) return bFav - aFav;
+        const aBadge = a.badge ? 1 : 0;
+        const bBadge = b.badge ? 1 : 0;
+        if (aBadge !== bBadge) return bBadge - aBadge;
+        return a.title.localeCompare(b.title, 'pt-BR');
+      });
+    } else {
+      // 'recent' - custom generated or newest first
+      return list.sort((a, b) => {
+        const aCustom = a.isCustomGenerated ? 1 : 0;
+        const bCustom = b.isCustomGenerated ? 1 : 0;
+        if (aCustom !== bCustom) return bCustom - aCustom;
+        return 0;
+      });
+    }
+  }, [stickers, sortBy, favoritesList]);
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -98,7 +133,7 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
             gradientEnd: sticker.primaryColor ? '#5B1E2D' : '#D4AF37',
             hasGradient: true,
             strokeColor: '#FFFFFF',
-            strokeWidth: 45,
+            strokeWidth: 0,
             glowColor: sticker.primaryColor || '#D4AF37',
             glowRadius: sticker.style === 'Neon' ? 80 : 0,
             shadowColor: 'rgba(91, 30, 45, 0.3)',
@@ -222,8 +257,23 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
           </p>
         </div>
 
-        {/* Multi-Select Toolbar Controls */}
+        {/* Multi-Select & Sorting Toolbar Controls */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Ordenação / Sorting Dropdown */}
+          <div className="flex items-center gap-1.5 bg-white border border-[#D4AF37]/50 rounded-xl px-3 py-1.5 shadow-xs transition-all hover:border-[#5B1E2D]">
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#5B1E2D]" />
+            <span className="text-xs font-bold text-[#5B1E2D] hidden sm:inline">Ordernar por:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'recent' | 'popular' | 'alphabetical')}
+              className="bg-transparent text-xs font-serif font-bold text-[#5B1E2D] outline-none cursor-pointer pr-1 focus:ring-0"
+            >
+              <option value="recent">Mais Recentes</option>
+              <option value="popular">Mais Populares</option>
+              <option value="alphabetical">A-Z (Ordem Alfabética)</option>
+            </select>
+          </div>
+
           {stickers.length > 0 && (
             <button
               onClick={handleSelectAll}
@@ -263,9 +313,9 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
       </div>
 
       {/* 5. Grid of Stickers */}
-      {stickers.length > 0 ? (
+      {sortedStickers.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-          {stickers.map((sticker) => (
+          {sortedStickers.map((sticker) => (
             <StickerCard
               key={sticker.id}
               sticker={sticker}
@@ -275,6 +325,7 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
               onToggleFavorite={onToggleFavorite}
               isSelected={selectedIds.includes(sticker.id)}
               onToggleSelect={handleToggleSelect}
+              onUpdateSticker={onUpdateSticker}
             />
           ))}
         </div>

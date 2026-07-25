@@ -34,7 +34,7 @@ export const PranchasSheetView: React.FC = () => {
             gradientEnd: sticker.primaryColor ? '#5B1E2D' : '#D4AF37',
             hasGradient: true,
             strokeColor: '#FFFFFF',
-            strokeWidth: 45,
+            strokeWidth: 0,
             glowColor: sticker.primaryColor || '#D4AF37',
             glowRadius: sticker.style === 'Neon' ? 80 : 0,
             shadowColor: 'rgba(91, 30, 45, 0.3)',

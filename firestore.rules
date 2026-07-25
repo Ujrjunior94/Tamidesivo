@@ -50,70 +50,67 @@ service cloud.firestore {
       // Public view of stickers is allowed
       allow get, list: if true;
       
-      // Creating stickers is restricted to authenticated users
-      allow create: if isSignedIn()
-        && isValidId(stickerId)
-        && isValidSticker(incoming())
-        && incoming().createdBy == request.auth.uid
-        && incoming().createdAt == request.time;
+      // Creating stickers is restricted to authenticated users or guest sessions
+      allow create: if (isValidId(stickerId) && isValidSticker(incoming()) && incoming().createdAt == request.time)
+        && (
+          (isSignedIn() && incoming().createdBy == request.auth.uid) ||
+          (incoming().createdBy != null && (incoming().createdBy.matches('^guest_.*') || incoming().createdBy == 'anonymous'))
+        );
         
       // Updating stickers is restricted to the owner/creator
-      allow update: if isSignedIn()
-        && isValidId(stickerId)
-        && isValidSticker(incoming())
-        && existing().createdBy == request.auth.uid
-        && incoming().createdBy == existing().createdBy
-        && incoming().createdAt == existing().createdAt;
+      allow update: if (isValidId(stickerId) && isValidSticker(incoming()) && incoming().createdBy == existing().createdBy && incoming().createdAt == existing().createdAt)
+        && (
+          (isSignedIn() && existing().createdBy == request.auth.uid) ||
+          (existing().createdBy != null && (existing().createdBy.matches('^guest_.*') || existing().createdBy == 'anonymous'))
+        );
         
       // Deleting stickers is restricted to the owner/creator
-      allow delete: if isSignedIn()
-        && isValidId(stickerId)
-        && existing().createdBy == request.auth.uid;
+      allow delete: if isValidId(stickerId)
+        && (
+          (isSignedIn() && existing().createdBy == request.auth.uid) ||
+          (existing().createdBy != null && (existing().createdBy.matches('^guest_.*') || existing().createdBy == 'anonymous'))
+        );
     }
 
     // 3. Favorites Collection
     match /favorites/{userId} {
       // Users can only read their own favorites document
-      allow get: if isSignedIn() && userId == request.auth.uid;
-      allow list: if isSignedIn() && userId == request.auth.uid;
+      allow get: if (isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*');
+      allow list: if (isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*');
 
-      allow create: if isSignedIn()
-        && userId == request.auth.uid
+      allow create: if ((isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*'))
         && isValidId(userId)
         && isValidFavorites(incoming())
-        && incoming().userId == request.auth.uid
+        && incoming().userId == userId
         && incoming().updatedAt == request.time;
 
-      allow update: if isSignedIn()
-        && userId == request.auth.uid
+      allow update: if ((isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*'))
         && isValidId(userId)
         && isValidFavorites(incoming())
-        && incoming().userId == existing().userId
+        && incoming().userId == userId
         && incoming().updatedAt == request.time;
 
-      allow delete: if isSignedIn() && userId == request.auth.uid;
+      allow delete: if (isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*');
     }
 
     // 4. User Configurations Collection
     match /user_configs/{userId} {
-      allow get: if isSignedIn() && userId == request.auth.uid;
-      allow list: if isSignedIn() && userId == request.auth.uid;
+      allow get: if (isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*');
+      allow list: if (isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*');
 
-      allow create: if isSignedIn()
-        && userId == request.auth.uid
+      allow create: if ((isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*'))
         && isValidId(userId)
         && isValidUserConfig(incoming())
-        && incoming().userId == request.auth.uid
+        && incoming().userId == userId
         && incoming().updatedAt == request.time;
 
-      allow update: if isSignedIn()
-        && userId == request.auth.uid
+      allow update: if ((isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*'))
         && isValidId(userId)
         && isValidUserConfig(incoming())
-        && incoming().userId == existing().userId
+        && incoming().userId == userId
         && incoming().updatedAt == request.time;
 
-      allow delete: if isSignedIn() && userId == request.auth.uid;
+      allow delete: if (isSignedIn() && userId == request.auth.uid) || userId.matches('^guest_.*');
     }
   }
 }

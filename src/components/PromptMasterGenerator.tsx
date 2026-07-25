@@ -37,6 +37,9 @@ export const PromptMasterGenerator: React.FC<PromptMasterGeneratorProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
+  const [isSavedNotice, setIsSavedNotice] = useState(false);
+  const [generatingPack, setGeneratingPack] = useState(false);
+
   // Generate Prompt Master via Gemini
   const handleGeneratePromptMaster = async () => {
     setLoadingPrompt(true);
@@ -66,6 +69,7 @@ export const PromptMasterGenerator: React.FC<PromptMasterGeneratorProps> = ({
     if (!promptResult?.englishPrompt && !phrase) return;
     setGeneratingImage(true);
     setErrorMsg(null);
+    setIsSavedNotice(false);
     try {
       const activePrompt = promptResult?.englishPrompt || `A luxury hand-lettered graphic sticker of "${phrase}" in modern calligraphy, delicate 1px fine line strokes, die-cut white contour border`;
       const res = await fetch('/api/ai/generate-sticker', {
@@ -80,18 +84,19 @@ export const PromptMasterGenerator: React.FC<PromptMasterGeneratorProps> = ({
         // Add sticker item to user session
         const newSticker: StickerItem = {
           id: `ai-gen-${Date.now()}`,
-          title: phrase || 'Sticker IA',
+          title: phrase || 'Adesivo IA Tamiris',
           category: category,
           style: style,
           tags: ['gerado-por-ia', category, style.toLowerCase()],
           primaryColor: promptResult?.colorPalette?.[0] || '#D4AF37',
           textColor: '#FFFFFF',
-          fontFamily: promptResult?.recommendedFont || 'Luxury Script',
-          badge: 'TAMIRIS IA',
+          fontFamily: promptResult?.recommendedFont || 'Script Elegante',
+          badge: 'IA TAMIRIS',
           previewUrl: data.imageUrl,
           isCustomGenerated: true,
         };
         onAddGeneratedSticker(newSticker);
+        setIsSavedNotice(true);
       } else {
         throw new Error(data.error || 'Não foi possível gerar a imagem.');
       }
@@ -100,6 +105,46 @@ export const PromptMasterGenerator: React.FC<PromptMasterGeneratorProps> = ({
       setErrorMsg(err.message || 'Erro ao gerar adesivo IA com Gemini.');
     } finally {
       setGeneratingImage(false);
+    }
+  };
+
+  // Generate Batch Pack of 6 AI Stickers
+  const handleGenerateAIPack = async () => {
+    setGeneratingPack(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/ai/suggest-pack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, style }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.pack) {
+        for (let i = 0; i < data.data.pack.length; i++) {
+          const item = data.data.pack[i];
+          const newSticker: StickerItem = {
+            id: `ai-pack-${Date.now()}-${i}`,
+            title: item.title || item.phrase || `Adesivo IA ${i + 1}`,
+            category: category,
+            style: style,
+            tags: ['pacote-ia', category, style.toLowerCase()],
+            primaryColor: item.primaryColor || '#D4AF37',
+            textColor: '#FFFFFF',
+            fontFamily: item.fontFamily || 'Script Elegante',
+            badge: 'PACOTE IA',
+            isCustomGenerated: true,
+          };
+          onAddGeneratedSticker(newSticker);
+        }
+        setIsSavedNotice(true);
+      } else {
+        throw new Error(data.error || 'Falha ao sugerir pacote IA.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Erro ao gerar pacote de adesivos IA.');
+    } finally {
+      setGeneratingPack(false);
     }
   };
 
@@ -381,8 +426,8 @@ export const PromptMasterGenerator: React.FC<PromptMasterGeneratorProps> = ({
             )}
           </div>
 
-          {/* AI Image Generation Button */}
-          <div className="pt-4 border-t border-[#D4AF37]/20">
+          {/* AI Image Generation Buttons */}
+          <div className="pt-4 border-t border-[#D4AF37]/20 space-y-2">
             <button
               onClick={handleGenerateAIImage}
               disabled={generatingImage || (!promptResult && !phrase)}
@@ -400,10 +445,38 @@ export const PromptMasterGenerator: React.FC<PromptMasterGeneratorProps> = ({
                 </>
               )}
             </button>
+
+            <button
+              onClick={handleGenerateAIPack}
+              disabled={generatingPack}
+              className="w-full py-2.5 px-4 rounded-xl bg-[#5B1E2D] hover:bg-[#8B2D44] text-[#D4AF37] font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 border border-[#D4AF37]/30"
+            >
+              {generatingPack ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-[#D4AF37]" />
+                  <span>Gerando Pacote de 6 Adesivos IA...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+                  <span>Gerar Pacote de 6 Adesivos IA nesta Categoria</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
       </div>
+
+      {/* Saved Notice */}
+      {isSavedNotice && (
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs text-emerald-900 font-serif font-bold flex items-center justify-between gap-3 animate-fadeIn max-w-xl mx-auto">
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Adesivo(s) gerado(s) e salvo(s) na sua Galeria e em Nuvem Firestore com sucesso!</span>
+          </div>
+        </div>
+      )}
 
       {/* Generated Image Preview Card */}
       {generatedImageUrl && (
@@ -420,15 +493,37 @@ export const PromptMasterGenerator: React.FC<PromptMasterGeneratorProps> = ({
             <img src={generatedImageUrl} alt="Sticker IA" className="w-full h-full object-contain filter drop-shadow-md relative z-10" />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-2 pt-2">
             <a
               href={generatedImageUrl}
               download={`tamiris-santana-sticker-ia-${phrase.toLowerCase().replace(/\s+/g, '-')}.png`}
-              className="flex-1 py-2.5 bg-[#5B1E2D] hover:bg-[#8B2D44] text-[#D4AF37] font-serif font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md border border-[#D4AF37]/50"
+              className="py-2.5 bg-[#5B1E2D] hover:bg-[#8B2D44] text-[#D4AF37] font-serif font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md border border-[#D4AF37]/50"
             >
               <Download className="w-4 h-4" />
-              <span>Baixar PNG Transparente</span>
+              <span>Baixar PNG</span>
             </a>
+
+            <button
+              onClick={() => {
+                const newSticker: StickerItem = {
+                  id: `ai-gen-studio-${Date.now()}`,
+                  title: phrase || 'Adesivo IA Tamiris',
+                  category: category,
+                  style: style,
+                  tags: ['gerado-por-ia'],
+                  primaryColor: '#D4AF37',
+                  textColor: '#FFFFFF',
+                  fontFamily: 'Script Elegante',
+                  badge: 'IA TAMIRIS',
+                  previewUrl: generatedImageUrl,
+                };
+                onEditSticker(newSticker);
+              }}
+              className="py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-[#5B1E2D] font-serif font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md border border-[#D4AF37]"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Editar no Estúdio</span>
+            </button>
           </div>
         </div>
       )}

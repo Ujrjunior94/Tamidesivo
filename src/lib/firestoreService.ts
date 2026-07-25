@@ -56,7 +56,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  // Do NOT throw inside background async snapshot subscriptions to prevent uncaught exceptions crashing the app.
+  // Instead, log the error and allow the application to degrade gracefully.
 }
 
 /**

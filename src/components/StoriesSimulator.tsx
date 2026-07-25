@@ -872,9 +872,9 @@ export const StoriesSimulator: React.FC<StoriesSimulatorProps> = ({ initialStick
                             className="px-4 py-2 rounded-2xl backdrop-blur-md text-center filter drop-shadow-2xl flex items-center justify-center gap-2 select-none pointer-events-none transition-all"
                             style={{
                               backgroundColor: `${element.sticker.primaryColor || '#5B1E2D'}DD`,
-                              borderColor: `${element.sticker.textColor || '#D4AF37'}B0`,
+                              borderColor: 'transparent',
                               color: element.sticker.textColor || '#F8F6F3',
-                              borderWidth: '1px',
+                              borderWidth: '0px',
                             }}
                           >
                             {element.sticker.iconSymbol && (

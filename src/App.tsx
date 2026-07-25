@@ -10,6 +10,7 @@ import { UserProfileView } from './components/UserProfileView';
 import { OnboardingTour } from './components/OnboardingTour';
 import { StoryEffectsCatalog } from './components/StoryEffectsCatalog';
 import { HighlightLogoCreator } from './components/HighlightLogoCreator';
+import { Sticker3DSimulator } from './components/Sticker3DSimulator';
 import { STICKERS_DATA } from './data/stickersData';
 import { CategoryId, VisualStyle, StickerItem } from './types';
 import { renderStickerToCanvas } from './utils/stickerRenderer';
@@ -25,7 +26,7 @@ import {
 import { User } from 'firebase/auth';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo'>('library');
+  const [activeTab, setActiveTab] = useState<'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo' | 'simulador-3d'>('library');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'all' | 'favorites'>('all');
   const [selectedStyle, setSelectedStyle] = useState<VisualStyle | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -109,6 +110,13 @@ export default function App() {
     saveCustomStickerToCloud(newSticker, currentUser?.uid);
   };
 
+  const handleUpdateSticker = (updatedSticker: StickerItem) => {
+    setAllStickers((prev) =>
+      prev.map((s) => (s.id === updatedSticker.id ? updatedSticker : s))
+    );
+    saveCustomStickerToCloud(updatedSticker, currentUser?.uid);
+  };
+
   const handleEditSticker = (sticker: StickerItem) => {
     setEditingSticker(sticker);
   };
@@ -143,7 +151,7 @@ export default function App() {
             gradientEnd: sticker.primaryColor ? '#5B1E2D' : '#D4AF37',
             hasGradient: true,
             strokeColor: '#FFFFFF',
-            strokeWidth: 45,
+            strokeWidth: 0,
             glowColor: sticker.primaryColor || '#D4AF37',
             glowRadius: sticker.style === 'Neon' ? 80 : 0,
             shadowColor: 'rgba(91, 30, 45, 0.3)',
@@ -223,6 +231,7 @@ export default function App() {
                 onOpenPromptMaster={() => setActiveTab('prompt-master')}
                 favoritesList={favoritesList}
                 onToggleFavorite={handleToggleFavorite}
+                onUpdateSticker={handleUpdateSticker}
               />
             </>
           )}
@@ -247,6 +256,7 @@ export default function App() {
                 onOpenPromptMaster={() => setActiveTab('prompt-master')}
                 favoritesList={favoritesList}
                 onToggleFavorite={handleToggleFavorite}
+                onUpdateSticker={handleUpdateSticker}
               />
             </>
           )}
@@ -299,6 +309,14 @@ export default function App() {
 
           {activeTab === 'destaques-logo' && (
             <HighlightLogoCreator />
+          )}
+
+          {activeTab === 'simulador-3d' && (
+            <Sticker3DSimulator
+              stickers={allStickers}
+              selectedSticker={storySticker || editingSticker}
+              onSelectSticker={(s) => setStorySticker(s)}
+            />
           )}
         </main>
 
