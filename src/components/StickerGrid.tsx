@@ -21,6 +21,10 @@ import {
   Clock,
   Flame,
   SortAsc,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid,
 } from 'lucide-react';
 
 interface StickerGridProps {
@@ -52,6 +56,7 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
 
   // Sorting state
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'alphabetical'>('recent');
+  const [showBanners, setShowBanners] = useState<boolean>(false);
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -182,52 +187,82 @@ export const StickerGrid: React.FC<StickerGridProps> = ({
   const allSelected = stickers.length > 0 && selectedIds.length === stickers.length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
-      {/* 1. Rotating Feature Banner */}
-      <FeaturedBannerCarousel
-        onOpenAIPrompt={onOpenPromptMaster}
-        onSelectCategory={(cat) => onSelectCategory(cat as any)}
-      />
+      {/* Simplified Header / Optional Collapsible Banners */}
+      {showBanners ? (
+        <div className="space-y-6 animate-sticker-fade-in">
+          <div className="flex items-center justify-between bg-white border border-[#D4AF37]/40 px-4 py-2 rounded-2xl shadow-xs">
+            <span className="text-xs font-serif font-bold text-[#5B1E2D] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#D4AF37]" /> Destaques e Categorias 3D
+            </span>
+            <button
+              onClick={() => setShowBanners(false)}
+              className="text-xs font-semibold text-[#5B1E2D] hover:text-[#8B2D44] flex items-center gap-1 cursor-pointer bg-[#F8F6F3] px-3 py-1 rounded-xl border border-[#D4AF37]/30"
+            >
+              <ChevronUp className="w-3.5 h-3.5" />
+              <span>Ocultar Destaques (Modo Simplificado)</span>
+            </button>
+          </div>
 
-      {/* 2. Big Luxury Category Cards */}
-      <BigCategoryCards
-        selectedCategory={selectedCategory}
-        onSelectCategory={onSelectCategory}
-      />
+          {/* 1. Rotating Feature Banner */}
+          <FeaturedBannerCarousel
+            onOpenAIPrompt={onOpenPromptMaster}
+            onSelectCategory={(cat) => onSelectCategory(cat as any)}
+          />
+
+          {/* 2. Big Luxury Category Cards */}
+          <BigCategoryCards
+            selectedCategory={selectedCategory}
+            onSelectCategory={onSelectCategory}
+          />
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-white border border-[#D4AF37]/30 px-5 py-3 rounded-2xl shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#5B1E2D] text-[#D4AF37] flex items-center justify-center font-serif font-bold text-xs shadow-xs">
+              TS
+            </div>
+            <div>
+              <span className="text-xs font-serif font-bold text-[#5B1E2D] block">
+                Galeria de Adesivos 4K • Tamiris Santana
+              </span>
+              <span className="text-[10px] text-stone-500 font-light block">
+                Navegação simplificada e direta aos adesivos
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowBanners(true)}
+            className="text-xs font-bold text-[#5B1E2D] hover:text-[#8B2D44] flex items-center gap-1.5 cursor-pointer bg-[#F8F6F3] hover:bg-[#EFE8DF] px-3.5 py-1.5 rounded-xl border border-[#D4AF37]/40 transition-all shadow-2xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span className="hidden sm:inline">Exibir Destaques & Banners</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* 3. Selected Category Header Info (if filtered) */}
       {currentCategoryInfo && selectedCategory !== 'all' && (
-        <div className="relative overflow-hidden rounded-[28px] bg-[#5B1E2D] border border-[#D4AF37]/40 p-6 sm:p-8 shadow-xl text-[#F8F6F3]">
-          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-[#D4AF37]/15 rounded-full blur-[90px] pointer-events-none" />
-          <div className="relative z-10 space-y-2 max-w-3xl">
+        <div className="relative overflow-hidden rounded-2xl bg-[#5B1E2D] border border-[#D4AF37]/40 p-5 shadow-md text-[#F8F6F3]">
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-[#D4AF37]/15 rounded-full blur-[70px] pointer-events-none" />
+          <div className="relative z-10 space-y-1.5 max-w-3xl">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-[#D4AF37] text-[#5B1E2D] font-body">
-                Coleção Exclusiva
+              <span className="text-[9px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#D4AF37] text-[#5B1E2D]">
+                Coleção
               </span>
               <span className="text-xs text-[#D4AF37] font-semibold">
-                {stickers.length} Adesivos em Alta Resolução 4K
+                {stickers.length} Adesivos 4K
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-serif-title font-bold text-[#F8F6F3]">
+            <h1 className="text-xl sm:text-2xl font-serif-title font-bold text-[#F8F6F3]">
               {currentCategoryInfo.name}
             </h1>
-            <p className="text-xs sm:text-sm text-[#EFE8DF] font-light leading-relaxed">
+            <p className="text-xs text-[#EFE8DF] font-light leading-relaxed">
               {currentCategoryInfo.description}
             </p>
-            {currentCategoryInfo.samplePhrases && (
-              <div className="flex flex-wrap items-center gap-2 pt-2">
-                <span className="text-xs font-bold text-[#D4AF37]">Sugestões de Frases:</span>
-                {currentCategoryInfo.samplePhrases.map((phrase) => (
-                  <span
-                    key={phrase}
-                    className="text-xs bg-white/10 text-[#F8F6F3] px-3 py-1 rounded-full border border-[#D4AF37]/30"
-                  >
-                    "{phrase}"
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}

@@ -10,7 +10,7 @@ import { UserProfileView } from './components/UserProfileView';
 import { OnboardingTour } from './components/OnboardingTour';
 import { StoryEffectsCatalog } from './components/StoryEffectsCatalog';
 import { HighlightLogoCreator } from './components/HighlightLogoCreator';
-import { Sticker3DSimulator } from './components/Sticker3DSimulator';
+import { MobileWebFrame } from './components/MobileWebFrame';
 import { STICKERS_DATA } from './data/stickersData';
 import { CategoryId, VisualStyle, StickerItem } from './types';
 import { renderStickerToCanvas } from './utils/stickerRenderer';
@@ -25,6 +25,10 @@ import {
 } from './lib/firestoreService';
 import { User } from 'firebase/auth';
 
+const Sticker3DSimulator = React.lazy(() =>
+  import('./components/Sticker3DSimulator').then((m) => ({ default: m.Sticker3DSimulator }))
+);
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'library' | 'studio' | 'prompt-master' | 'pranchas' | 'stories-mockup' | 'favorites' | 'profile' | 'efeitos-story' | 'destaques-logo' | 'simulador-3d'>('library');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'all' | 'favorites'>('all');
@@ -36,6 +40,7 @@ export default function App() {
   const [editingSticker, setEditingSticker] = useState<StickerItem | null>(null);
   const [storySticker, setStorySticker] = useState<StickerItem | null>(null);
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+  const [isMobileMode, setIsMobileMode] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
 
@@ -186,28 +191,34 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3] text-[#2B2B2B] flex flex-col font-body selection:bg-[#5B1E2D] selection:text-[#D4AF37] relative overflow-x-hidden">
-      
-      {/* Background Subtle Gradient Accents */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#5B1E2D]/15 rounded-full blur-[140px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#D4AF37]/20 rounded-full blur-[140px]"></div>
-      </div>
+    <MobileWebFrame
+      isMobileActive={isMobileMode}
+      onToggleMobileMode={() => setIsMobileMode(false)}
+    >
+      <div className="min-h-screen bg-[#F8F6F3] text-[#2B2B2B] flex flex-col font-body selection:bg-[#5B1E2D] selection:text-[#D4AF37] relative overflow-x-hidden">
+        
+        {/* Background Subtle Gradient Accents */}
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#5B1E2D]/15 rounded-full blur-[140px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#D4AF37]/20 rounded-full blur-[140px]"></div>
+        </div>
 
-      {/* Main Content Layer */}
-      <div className="relative z-10 flex flex-col flex-1 min-h-screen">
-        {/* Top Navbar */}
-        <Navbar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          totalStickersCount={allStickers.length}
-          favoritesCount={favoritesList.length}
-          onOpenAIPrompt={() => setActiveTab('prompt-master')}
-          onDownloadAllZip={handleDownloadMasterZip}
-          onOpenTour={() => setIsTourOpen(true)}
-        />
+        {/* Main Content Layer */}
+        <div className="relative z-10 flex flex-col flex-1 min-h-screen">
+          {/* Top Navbar */}
+          <Navbar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            totalStickersCount={allStickers.length}
+            favoritesCount={favoritesList.length}
+            onOpenAIPrompt={() => setActiveTab('prompt-master')}
+            onDownloadAllZip={handleDownloadMasterZip}
+            onOpenTour={() => setIsTourOpen(true)}
+            isMobileMode={isMobileMode}
+            onToggleMobileMode={() => setIsMobileMode(!isMobileMode)}
+          />
 
         {/* Main Tab Views */}
         <main className="flex-1 pb-12">
@@ -312,11 +323,19 @@ export default function App() {
           )}
 
           {activeTab === 'simulador-3d' && (
-            <Sticker3DSimulator
-              stickers={allStickers}
-              selectedSticker={storySticker || editingSticker}
-              onSelectSticker={(s) => setStorySticker(s)}
-            />
+            <React.Suspense fallback={
+              <div className="flex flex-col items-center justify-center p-12 min-h-[400px] text-center" id="sim-loader">
+                <div className="w-12 h-12 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-sm font-serif font-bold text-[#5B1E2D]">Carregando Simulador 3D...</p>
+                <p className="text-xs text-stone-500 mt-1 max-w-xs">Inicializando o motor gráfico Three.js de alta performance</p>
+              </div>
+            }>
+              <Sticker3DSimulator
+                stickers={allStickers}
+                selectedSticker={storySticker || editingSticker}
+                onSelectSticker={(s) => setStorySticker(s)}
+              />
+            </React.Suspense>
           )}
         </main>
 
@@ -367,6 +386,7 @@ export default function App() {
       </div>
 
     </div>
+    </MobileWebFrame>
   );
 }
 

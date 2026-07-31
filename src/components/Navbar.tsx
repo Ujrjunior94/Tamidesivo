@@ -12,6 +12,8 @@ interface NavbarProps {
   onOpenAIPrompt: () => void;
   onDownloadAllZip: () => void;
   onOpenTour?: () => void;
+  isMobileMode?: boolean;
+  onToggleMobileMode?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -24,6 +26,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAIPrompt,
   onDownloadAllZip,
   onOpenTour,
+  isMobileMode = false,
+  onToggleMobileMode,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -136,6 +140,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right Action Icons & Buttons */}
           <div className="flex items-center gap-2">
             
+            {/* Modo Web Mobile Button */}
+            {onToggleMobileMode && (
+              <button
+                onClick={onToggleMobileMode}
+                className={`px-3 py-1.5 rounded-full border transition-all text-xs font-serif font-bold flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                  isMobileMode
+                    ? 'bg-[#D4AF37] text-[#5B1E2D] border-[#D4AF37] font-bold'
+                    : 'bg-[#4A1824] border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#5B1E2D]'
+                }`}
+                title="Alternar Modo de Visualização Web Mobile"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Modo Web Mobile</span>
+              </button>
+            )}
+
             {/* Share App Button */}
             <button
               onClick={handleShareApp}
